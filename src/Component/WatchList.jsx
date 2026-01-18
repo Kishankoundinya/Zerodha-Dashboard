@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Tooltip, Grow } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
-import { watchlist } from '../../../backend/Data/data';
+import { watchlist } from '../../Data/data';
 
 const WatchList = () => {
     return (
