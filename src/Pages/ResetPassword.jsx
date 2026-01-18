@@ -5,7 +5,7 @@ import Lock_icon from '../assets/Images/lock.svg'
 import { AppContent } from '../Context/AppContext'
 import { toast } from 'react-toastify'
 import axios from 'axios'
-import logo from '../assets/Images/logo.svg'
+
 
 const ResetPassword = () => {
     const { backendUrl } = useContext(AppContent)
