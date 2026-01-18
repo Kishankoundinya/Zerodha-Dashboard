@@ -3,7 +3,7 @@ import axios from 'axios'
 import { AppContent } from '../Context/AppContext'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
-import logo from '../assets/Images/logo.svg'
+
 
 const EmailVerify = () => {
     axios.defaults.withCredentials = true;
