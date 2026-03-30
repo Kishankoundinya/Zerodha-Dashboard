@@ -5,7 +5,7 @@ import { AppContent } from '../Context/AppContext'
 import { toast } from 'react-toastify'
 import axios from 'axios'
 import verifiedlogo from '../assets/Images/verified.svg'
-import logo from '../assets/Images/logo.svg'
+import logo from '../assets/Images/LogoImg.svg'
 
 const Navbar = () => {
   const navigate = useNavigate()
