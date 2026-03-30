@@ -5,7 +5,7 @@ import Lock_icon from '../assets/Images/lock.svg'
 import { AppContent } from '../Context/AppContext'
 import { toast } from 'react-toastify'
 import axios from 'axios'
-
+import logo from '../assets/Images/logo.svg'
 
 const ResetPassword = () => {
     const { backendUrl } = useContext(AppContent)
@@ -96,7 +96,7 @@ const ResetPassword = () => {
         <div className='min-h-screen bg-gray-950 flex flex-col items-center justify-center px-4'>
             <div className='absolute top-8 left-8'>
                 <NavLink to={frontendUrl} className="text-xl font-bold text-orange-400">
-              Zerodha Clone
+              <img src={logo} alt="" />
             </NavLink>
             </div>
 

@@ -42,7 +42,7 @@ const PublicRoute = ({ children }) => {
 
 function App() {
   return (
-    <div className="App">
+    <div className="App bg-[#00001b]">
       <ToastContainer 
         position="top-right" 
         autoClose={3000}

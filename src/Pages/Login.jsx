@@ -2,6 +2,7 @@ import React, { useContext, useState } from 'react'
 import person_icon from '../assets/Images/person-icon.svg'
 import mail_icon from '../assets/Images/Email.svg'
 import lock_icon from '../assets/Images/lock.svg'
+import logo from '../assets/Images/logo.svg'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { AppContent } from '../Context/AppContext'
 import axios from 'axios'
@@ -49,10 +50,10 @@ const Login = () => {
     }
 
     return (
-        <div className='min-h-screen bg-gray-950 flex items-center justify-center px-4'>
+        <div className='min-h-screen bg-[#00001b] flex items-center justify-center px-4'>
             <div className='absolute top-8 left-8'>
             <NavLink to={frontendUrl} className="text-xl font-bold text-orange-400">
-              Zerodha Clone
+              <img src={logo} alt="" />
             </NavLink>
             </div>
 
