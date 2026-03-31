@@ -8,14 +8,9 @@ import { AppContent } from '../Context/AppContext'
 import axios from 'axios'
 import { toast } from 'react-toastify';
 
-// Set axios defaults ONCE outside the component
-axios.defaults.withCredentials = true;
-// Add a default timeout to prevent hanging
-axios.defaults.timeout = 30000; // 30 seconds
-
 const Login = () => {
     const navigate = useNavigate()
-    const { backendUrl, setIsLoggedin, getUserData } = useContext(AppContent)
+    const { setIsLoggedin, getUserData } = useContext(AppContent) // Removed backendUrl from here
     const [state, setState] = useState("Sign Up")
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
@@ -23,17 +18,13 @@ const Login = () => {
     const frontendUrl = import.meta.env.VITE_FRONTEND_URL 
 
     const onSubmitHandler = async (e) => {
-        e.preventDefault(); // Move this to the top
+        e.preventDefault();
         
         try {
             if (state === 'Sign Up') {
-                const { data } = await axios.post(`${backendUrl}/api/auth/register`, 
-                    { name, email, password },
-                    {
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    }
+                // Using RELATIVE URL - baseURL is already set in AppContext
+                const { data } = await axios.post('/api/auth/register', 
+                    { name, email, password }
                 )
                 if (data.success) {
                     setIsLoggedin(true);
@@ -46,13 +37,9 @@ const Login = () => {
                     toast.error(data.message)
                 }
             } else {
-                const { data } = await axios.post(`${backendUrl}/api/auth/login`, 
-                    { email, password },
-                    {
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    }
+                // Using RELATIVE URL - baseURL is already set in AppContext
+                const { data } = await axios.post('/api/auth/login', 
+                    { email, password }
                 )
                 if (data.success) {
                     setIsLoggedin(true)

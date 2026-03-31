@@ -5,7 +5,11 @@ import { AppContent } from "./AppContext";
 import { useEffect } from "react";
 
 const AppContextProvider = (props) => {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  // Fix: Remove trailing slash from backendUrl if it exists
+  let backendUrl = import.meta.env.VITE_BACKEND_URL;
+  if (backendUrl && backendUrl.endsWith('/')) {
+    backendUrl = backendUrl.slice(0, -1);
+  }
   
   // Initialize from localStorage for immediate access
   const [isLoggedin, setIsLoggedin] = useState(() => {
@@ -21,8 +25,34 @@ const AppContextProvider = (props) => {
     }
   });
 
-  axios.defaults.withCredentials = true; 
+  // Configure axios defaults
+  axios.defaults.withCredentials = true;
   axios.defaults.baseURL = backendUrl;
+  axios.defaults.timeout = 30000; // 30 second timeout
+  axios.defaults.headers.common['Content-Type'] = 'application/json';
+
+  // Add request interceptor for debugging
+  axios.interceptors.request.use(
+    (config) => {
+      console.log(`Making ${config.method.toUpperCase()} request to: ${config.baseURL}${config.url}`);
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
+    }
+  );
+
+  // Add response interceptor for debugging
+  axios.interceptors.response.use(
+    (response) => {
+      console.log(`Response from ${response.config.url}:`, response.status);
+      return response;
+    },
+    (error) => {
+      console.error(`API Error for ${error.config?.url}:`, error.message);
+      return Promise.reject(error);
+    }
+  );
 
   const getAuthState = async () => {
     try {
@@ -38,6 +68,10 @@ const AppContextProvider = (props) => {
     } catch (error) {
       console.error("Auth check failed:", error.message);
       // Don't clear on network errors - keep optimistic state
+      if (error.response?.status === 401) {
+        // Unauthorized - clear auth data
+        clearAuthData();
+      }
     }
   };
 
@@ -55,6 +89,9 @@ const AppContextProvider = (props) => {
       // Don't toast for network errors during auto-check
       if (error.response?.status !== 401 && error.response?.status !== 403) {
         toast.error(error.message);
+      }
+      if (error.response?.status === 401) {
+        clearAuthData();
       }
     }
   };
@@ -77,7 +114,7 @@ const AppContextProvider = (props) => {
     }
   };
 
-  const login = async (userData) => {
+  const login = (userData) => {
     setUserData(userData);
     setIsLoggedin(true);
     localStorage.setItem('isLoggedin', 'true');
