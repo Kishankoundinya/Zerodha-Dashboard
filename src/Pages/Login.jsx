@@ -8,6 +8,10 @@ import { AppContent } from '../Context/AppContext'
 import axios from 'axios'
 import { toast } from 'react-toastify';
 
+// Set axios defaults ONCE outside the component
+axios.defaults.withCredentials = true;
+// Add a default timeout to prevent hanging
+axios.defaults.timeout = 30000; // 30 seconds
 
 const Login = () => {
     const navigate = useNavigate()
@@ -19,33 +23,58 @@ const Login = () => {
     const frontendUrl = import.meta.env.VITE_FRONTEND_URL 
 
     const onSubmitHandler = async (e) => {
+        e.preventDefault(); // Move this to the top
+        
         try {
-            axios.defaults.withCredentials = true;
-            e.preventDefault();
             if (state === 'Sign Up') {
-                const { data } = await axios.post(backendUrl + '/api/auth/register', { name, email, password })
+                const { data } = await axios.post(`${backendUrl}/api/auth/register`, 
+                    { name, email, password },
+                    {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                )
                 if (data.success) {
                     setIsLoggedin(true);
                     getUserData();
+                    toast.success('Account created successfully!');
                     setTimeout(() => {
                         navigate('/home')
                     }, 300);
-                }
-                else {
+                } else {
                     toast.error(data.message)
                 }
             } else {
-                const { data } = await axios.post(backendUrl + '/api/auth/login', { email, password })
+                const { data } = await axios.post(`${backendUrl}/api/auth/login`, 
+                    { email, password },
+                    {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                )
                 if (data.success) {
                     setIsLoggedin(true)
                     getUserData();
+                    toast.success('Login successful!');
                     navigate('/home')
                 } else {
                     toast.error(data.message)
                 }
             }
         } catch (error) {
-            toast.error(error.message)
+            console.error('Login error:', error);
+            if (error.response) {
+                // The request was made and the server responded with a status code
+                toast.error(error.response.data?.message || 'Server error occurred');
+            } else if (error.request) {
+                // The request was made but no response was received
+                toast.error('Cannot connect to server. Please check if backend is running.');
+            } else {
+                // Something happened in setting up the request
+                toast.error(error.message || 'An error occurred');
+            }
         }
     }
 
@@ -53,7 +82,7 @@ const Login = () => {
         <div className='min-h-screen bg-[#00001b] flex items-center justify-center px-4'>
             <div className='absolute top-8 left-8'>
             <NavLink to={frontendUrl} className="text-xl font-bold text-orange-400">
-              <img src={logo} alt="" />
+              <img src={logo} alt="Logo" />
             </NavLink>
             </div>
 
@@ -111,7 +140,7 @@ const Login = () => {
                             Forgot Password?
                         </p>
 
-                        <button className='w-full py-3.5 rounded-xl font-medium text-white bg-indigo-700'>
+                        <button type="submit" className='w-full py-3.5 rounded-xl font-medium text-white bg-indigo-700 hover:bg-indigo-600 transition-colors'>
                             {state}
                         </button>
                     </form>
@@ -122,7 +151,7 @@ const Login = () => {
                             {' '}
                             <span 
                                 onClick={() => setState(state === 'Sign Up' ? 'Login' : 'Sign Up')}
-                                className='text-indigo-400 cursor-pointer font-medium'
+                                className='text-indigo-400 cursor-pointer font-medium hover:text-indigo-300'
                             >
                                 {state === 'Sign Up' ? 'Sign In' : 'Create Account'}
                             </span>
