@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import stockImg from '../assets/Images/search.svg'
+import stockImg from '../assets/Images/Search.svg'
 
 const StockSearch = () => {
     const navigate = useNavigate();
