@@ -3,6 +3,7 @@ import axios from 'axios'
 import { AppContent } from '../Context/AppContext'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
+import logo from '../assets/Images/LogoImg.svg'
 
 
 const EmailVerify = () => {
@@ -71,8 +72,8 @@ const EmailVerify = () => {
     return (
         <div className='min-h-screen bg-gray-950 flex flex-col items-center justify-center px-4'>
             <div className='absolute top-8 left-8'>
-            <NavLink to={frontendUrl} className="text-xl font-bold text-orange-400">
-              Zerodha Clone
+            <NavLink to={'/home'} className="text-xl font-bold text-orange-400">
+              <img src={logo} alt="" />
             </NavLink>
             </div>
 

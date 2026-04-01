@@ -7,7 +7,6 @@ import EmailVerify from './Pages/EmailVerify';
 import ResetPassword from './Pages/ResetPassword';
 import Landing from './Pages/Landing';
 import Home from './Pages/Home';
-import Positions from './Component/Positions';
 import Header from './Component/Header';
 import Orders from './Component/Orders';
 import Holdings from './Component/Holdings';
@@ -76,13 +75,12 @@ function App() {
           element={<Home />}>
           <Route index element={<Header />} />
           <Route path="orders" element={<Orders />} />
-          <Route path="positions" element={<Positions />} />
           <Route path="holdings" element={<Holdings />} />
           <Route path="funds" element={<Funds />} />
         </Route>
 
         
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
     </div>
   );

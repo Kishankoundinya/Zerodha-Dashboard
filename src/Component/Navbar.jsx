@@ -78,18 +78,7 @@ const Navbar = () => {
           <div className="flex items-center space-x-2 lg:space-x-4">
             {/* Desktop Navigation Links */}
             <div className="hidden md:flex items-center space-x-2 lg:space-x-4">
-              <NavLink
-                to={'orders'}
-                className={({ isActive }) =>
-                  `px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-300 border border-indigo-500/30 shadow-lg'
-                      : 'text-gray-300 hover:text-white hover:bg-white/10 hover:scale-105'
-                  }`
-                }
-              >
-                Orders
-              </NavLink>
+             
               <NavLink
                 to={'holdings'}
                 className={({ isActive }) =>
@@ -100,20 +89,9 @@ const Navbar = () => {
                   }`
                 }
               >
-                Holdings
+                My Holdings
               </NavLink>
-              <NavLink
-                to={'positions'}
-                className={({ isActive }) =>
-                  `px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-300 border border-indigo-500/30 shadow-lg'
-                      : 'text-gray-300 hover:text-white hover:bg-white/10 hover:scale-105'
-                  }`
-                }
-              >
-                Positions
-              </NavLink>
+              
               <NavLink
                 to={'funds'}
                 className={({ isActive }) =>
@@ -124,7 +102,7 @@ const Navbar = () => {
                   }`
                 }
               >
-                Funds
+                My Account
               </NavLink>
             </div>
 
@@ -230,19 +208,7 @@ const Navbar = () => {
       {isMobileMenuOpen && (
         <div ref={mobileMenuRef} className="md:hidden bg-gradient-to-b from-[#00001b] to-[#00002b] border-t border-white/10 shadow-xl animate-slideDown">
           <div className="flex flex-col py-4 px-4 space-y-2">
-            <NavLink
-              to={'orders'}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={({ isActive }) =>
-                `px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  isActive
-                    ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-300 border border-indigo-500/30'
-                    : 'text-gray-300 hover:text-white hover:bg-white/10'
-                }`
-              }
-            >
-              Orders
-            </NavLink>
+           
             <NavLink
               to={'holdings'}
               onClick={() => setIsMobileMenuOpen(false)}
@@ -254,21 +220,9 @@ const Navbar = () => {
                 }`
               }
             >
-              Holdings
+              My Holdings
             </NavLink>
-            <NavLink
-              to={'positions'}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={({ isActive }) =>
-                `px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  isActive
-                    ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-300 border border-indigo-500/30'
-                    : 'text-gray-300 hover:text-white hover:bg-white/10'
-                }`
-              }
-            >
-              Positions
-            </NavLink>
+            
             <NavLink
               to={'funds'}
               onClick={() => setIsMobileMenuOpen(false)}
@@ -280,7 +234,7 @@ const Navbar = () => {
                 }`
               }
             >
-              Funds
+              My Account
             </NavLink>
           </div>
         </div>
