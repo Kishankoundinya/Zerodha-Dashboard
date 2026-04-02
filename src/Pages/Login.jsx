@@ -10,7 +10,7 @@ import { toast } from 'react-toastify';
 
 const Login = () => {
     const navigate = useNavigate()
-    const { setIsLoggedin, getUserData, login } = useContext(AppContent)
+    const { setIsLoggedin, getUserData, setUserData } = useContext(AppContent) // Changed: removed 'login'
     const [state, setState] = useState("Sign Up")
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
@@ -26,32 +26,60 @@ const Login = () => {
                     { name, email, password }
                 )
                 if (data.success) {
+                    // Store user data
                     if (data.userData) {
-                        login(data.userData);
+                        localStorage.setItem('userData', JSON.stringify(data.userData));
+                        setUserData(data.userData);
                     }
+                    
                     setIsLoggedin(true);
-                    await getUserData();
+                    localStorage.setItem('isLoggedin', 'true');
+                    
                     toast.success('Account created successfully!');
+                    
                     setTimeout(() => {
                         navigate('/home')
-                    }, 300);
+                    }, 500);
                 } else {
                     toast.error(data.message)
                 }
             } else {
+                // LOGIN - THIS IS WHERE THE CHANGE IS NEEDED
+                console.log('Logging in with:', email);
+                
                 const { data } = await axios.post('/api/auth/login', 
-                    { email, password }
-                )
-                if (data.success) {
-                    if (data.userData) {
-                        login(data.userData);
+                    { email, password },
+                    { 
+                        withCredentials: true  // IMPORTANT: This ensures cookies are sent/received
                     }
+                )
+                
+                console.log('Login response:', data);
+                
+                if (data.success) {
+                    // Store token if backend returns one
+                    if (data.token) {
+                        localStorage.setItem('authToken', data.token);
+                        // Set default auth header for all future axios requests
+                        axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+                    }
+                    
+                    // Store user data
+                    if (data.userData) {
+                        localStorage.setItem('userData', JSON.stringify(data.userData));
+                        setUserData(data.userData);
+                    }
+                    
                     setIsLoggedin(true);
+                    localStorage.setItem('isLoggedin', 'true');
+                    
+                    // Also try to fetch fresh user data
                     await getUserData();
+                    
                     toast.success('Login successful!');
-                    navigate('/home')
+                    navigate('/home');
                 } else {
-                    toast.error(data.message)
+                    toast.error(data.message || 'Login failed');
                 }
             }
         } catch (error) {
