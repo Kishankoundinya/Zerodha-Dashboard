@@ -9,7 +9,7 @@ import logo from '../assets/Images/LogoImg.svg'
 
 const Navbar = () => {
   const navigate = useNavigate()
-  const { userData, backendUrl, setUserData, setIsLoggedin } = useContext(AppContent)
+  const { userData, setUserData, setIsLoggedin } = useContext(AppContent)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const dropdownRef = useRef(null)
@@ -31,8 +31,8 @@ const Navbar = () => {
 
   const sendVerificationOtp = async () => {
     try {
-      axios.defaults.withCredentials = true;
-      const { data } = await axios.post(backendUrl + '/api/auth/send-verify-otp')
+      // ✅ FIX: Don't concatenate URL - use relative path since axios has baseURL configured
+      const { data } = await axios.post('/api/auth/send-verify-otp')
       if (data.success) {
         navigate('/email-verify')
         toast.success(data.message)
@@ -47,8 +47,8 @@ const Navbar = () => {
 
   const logout = async () => {
     try {
-      axios.defaults.withCredentials = true;
-      const { data } = await axios.post(backendUrl + '/api/auth/logout')
+      // ✅ FIX: Don't concatenate URL - use relative path since axios has baseURL configured
+      const { data } = await axios.post('/api/auth/logout')
       if (data.success) {
         setIsLoggedin(false)
         setUserData(null)
@@ -78,7 +78,6 @@ const Navbar = () => {
           <div className="flex items-center space-x-2 lg:space-x-4">
             {/* Desktop Navigation Links */}
             <div className="hidden md:flex items-center space-x-2 lg:space-x-4">
-             
               <NavLink
                 to={'holdings'}
                 className={({ isActive }) =>
@@ -208,7 +207,6 @@ const Navbar = () => {
       {isMobileMenuOpen && (
         <div ref={mobileMenuRef} className="md:hidden bg-gradient-to-b from-[#00001b] to-[#00002b] border-t border-white/10 shadow-xl animate-slideDown">
           <div className="flex flex-col py-4 px-4 space-y-2">
-           
             <NavLink
               to={'holdings'}
               onClick={() => setIsMobileMenuOpen(false)}
