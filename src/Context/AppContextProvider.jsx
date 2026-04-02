@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { createContext, useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { AppContent } from "./AppContext";
-import { useEffect } from "react";
+
+export const AppContent = createContext();
 
 const AppContextProvider = (props) => {
-  // Fix: Remove trailing slash from backendUrl if it exists
+  // Get backend URL from environment
   let backendUrl = import.meta.env.VITE_BACKEND_URL;
   if (backendUrl && backendUrl.endsWith('/')) {
     backendUrl = backendUrl.slice(0, -1);
@@ -28,7 +28,7 @@ const AppContextProvider = (props) => {
   // Configure axios defaults
   axios.defaults.withCredentials = true;
   axios.defaults.baseURL = backendUrl;
-  axios.defaults.timeout = 30000; // 30 second timeout
+  axios.defaults.timeout = 30000;
   axios.defaults.headers.common['Content-Type'] = 'application/json';
 
   // Add request interceptor for debugging
@@ -57,42 +57,42 @@ const AppContextProvider = (props) => {
   const getAuthState = async () => {
     try {
       const { data } = await axios.get('/api/auth/is-auth');
-      if (data.success) {
+      if (data.success && data.userData) {
         setIsLoggedin(true);
         localStorage.setItem('isLoggedin', 'true');
-        await getUserData();
+        setUserData(data.userData);
+        localStorage.setItem('userData', JSON.stringify(data.userData));
+        return true;
       } else {
-        // Clear if API says not authenticated
         clearAuthData();
+        return false;
       }
     } catch (error) {
       console.error("Auth check failed:", error.message);
-      // Don't clear on network errors - keep optimistic state
       if (error.response?.status === 401) {
-        // Unauthorized - clear auth data
         clearAuthData();
       }
+      return false;
     }
   };
 
   const getUserData = async () => {
     try {
-      const { data } = await axios.get('/api/user/data');
-      if (data.success) {
+      const { data } = await axios.get('/api/auth/is-auth');
+      if (data.success && data.userData) {
         setUserData(data.userData);
         localStorage.setItem('userData', JSON.stringify(data.userData));
+        return data.userData;
       } else {
-        toast.error(data.message);
         clearAuthData();
+        return null;
       }
     } catch (error) {
-      // Don't toast for network errors during auto-check
-      if (error.response?.status !== 401 && error.response?.status !== 403) {
-        toast.error(error.message);
-      }
+      console.error('Get user data error:', error);
       if (error.response?.status === 401) {
         clearAuthData();
       }
+      return null;
     }
   };
 
@@ -111,6 +111,7 @@ const AppContextProvider = (props) => {
     } finally {
       clearAuthData();
       toast.success("Logged out successfully");
+      window.location.href = '/login';
     }
   };
 

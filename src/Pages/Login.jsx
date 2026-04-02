@@ -10,7 +10,7 @@ import { toast } from 'react-toastify';
 
 const Login = () => {
     const navigate = useNavigate()
-    const { setIsLoggedin, getUserData } = useContext(AppContent) // Removed backendUrl from here
+    const { login: loginContext, getUserData } = useContext(AppContent)
     const [state, setState] = useState("Sign Up")
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
@@ -22,13 +22,13 @@ const Login = () => {
         
         try {
             if (state === 'Sign Up') {
-                // Using RELATIVE URL - baseURL is already set in AppContext
                 const { data } = await axios.post('/api/auth/register', 
                     { name, email, password }
                 )
                 if (data.success) {
-                    setIsLoggedin(true);
-                    getUserData();
+                    if (data.userData) {
+                        loginContext(data.userData);
+                    }
                     toast.success('Account created successfully!');
                     setTimeout(() => {
                         navigate('/home')
@@ -37,13 +37,13 @@ const Login = () => {
                     toast.error(data.message)
                 }
             } else {
-                // Using RELATIVE URL - baseURL is already set in AppContext
                 const { data } = await axios.post('/api/auth/login', 
                     { email, password }
                 )
                 if (data.success) {
-                    setIsLoggedin(true)
-                    getUserData();
+                    if (data.userData) {
+                        loginContext(data.userData);
+                    }
                     toast.success('Login successful!');
                     navigate('/home')
                 } else {
@@ -51,15 +51,12 @@ const Login = () => {
                 }
             }
         } catch (error) {
-            console.error('Login error:', error);
+            console.error('Auth error:', error);
             if (error.response) {
-                // The request was made and the server responded with a status code
                 toast.error(error.response.data?.message || 'Server error occurred');
             } else if (error.request) {
-                // The request was made but no response was received
                 toast.error('Cannot connect to server. Please check if backend is running.');
             } else {
-                // Something happened in setting up the request
                 toast.error(error.message || 'An error occurred');
             }
         }
@@ -68,9 +65,9 @@ const Login = () => {
     return (
         <div className='min-h-screen bg-[#00001b] flex items-center justify-center px-4'>
             <div className='absolute top-8 left-8'>
-            <NavLink to={frontendUrl} className="text-xl font-bold text-orange-400">
-              <img src={logo} alt="Logo" />
-            </NavLink>
+                <NavLink to={frontendUrl} className="text-xl font-bold text-orange-400">
+                    <img src={logo} alt="Logo" />
+                </NavLink>
             </div>
 
             <div className='w-full max-w-md'>
