@@ -10,7 +10,7 @@ import { toast } from 'react-toastify';
 
 const Login = () => {
     const navigate = useNavigate()
-    const { login: loginContext, getUserData } = useContext(AppContent)
+    const { setIsLoggedin, getUserData, login } = useContext(AppContent)
     const [state, setState] = useState("Sign Up")
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
@@ -27,8 +27,10 @@ const Login = () => {
                 )
                 if (data.success) {
                     if (data.userData) {
-                        loginContext(data.userData);
+                        login(data.userData);
                     }
+                    setIsLoggedin(true);
+                    await getUserData();
                     toast.success('Account created successfully!');
                     setTimeout(() => {
                         navigate('/home')
@@ -42,8 +44,10 @@ const Login = () => {
                 )
                 if (data.success) {
                     if (data.userData) {
-                        loginContext(data.userData);
+                        login(data.userData);
                     }
+                    setIsLoggedin(true);
+                    await getUserData();
                     toast.success('Login successful!');
                     navigate('/home')
                 } else {

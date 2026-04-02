@@ -15,6 +15,7 @@ const Navbar = () => {
   const dropdownRef = useRef(null)
   const mobileMenuRef = useRef(null)
 
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -30,6 +31,7 @@ const Navbar = () => {
 
   const sendVerificationOtp = async () => {
     try {
+      // ✅ FIX: Don't concatenate URL - use relative path since axios has baseURL configured
       const { data } = await axios.post('/api/auth/send-verify-otp')
       if (data.success) {
         navigate('/email-verify')
@@ -45,6 +47,7 @@ const Navbar = () => {
 
   const logout = async () => {
     try {
+      // ✅ FIX: Don't concatenate URL - use relative path since axios has baseURL configured
       const { data } = await axios.post('/api/auth/logout')
       if (data.success) {
         setIsLoggedin(false)
@@ -62,6 +65,7 @@ const Navbar = () => {
     <nav className="sticky top-0 z-50 w-full bg-gradient-to-r from-[#00001b] to-[#00002b] border-b border-white/10 shadow-2xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
+          {/* Logo */}
           <div className="flex-shrink-0">
             <NavLink to={'/home'} className="text-xl font-serif font-bold">
               <div className='flex items-end'>
@@ -70,7 +74,9 @@ const Navbar = () => {
             </NavLink>
           </div>
 
+          {/* Right side content - Navlinks and User Menu */}
           <div className="flex items-center space-x-2 lg:space-x-4">
+            {/* Desktop Navigation Links */}
             <div className="hidden md:flex items-center space-x-2 lg:space-x-4">
               <NavLink
                 to={'holdings'}
@@ -99,6 +105,7 @@ const Navbar = () => {
               </NavLink>
             </div>
 
+            {/* User Menu */}
             <div className="relative" ref={dropdownRef}>
               {userData ? (
                 <>
@@ -109,8 +116,10 @@ const Navbar = () => {
                     {userData.name[0].toUpperCase()}
                   </button>
 
+                  {/* Dropdown Menu */}
                   {isDropdownOpen && (
                     <div className="absolute right-0 top-full mt-3 w-80 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl z-50 overflow-hidden animate-fadeInUp">
+                      {/* User Info Section */}
                       <div className="p-6 bg-gradient-to-br from-gray-800/50 to-indigo-900/30 border-b border-white/10">
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-3">
@@ -130,6 +139,7 @@ const Navbar = () => {
                         </div>
                       </div>
 
+                      {/* Menu Items */}
                       <div className="py-2">
                         {!userData.isAccountVerified && (
                           <button
@@ -176,6 +186,7 @@ const Navbar = () => {
               )}
             </div>
 
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden flex items-center justify-center h-10 w-10 rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -192,6 +203,7 @@ const Navbar = () => {
         </div>
       </div>
 
+      {/* Mobile Navigation Menu */}
       {isMobileMenuOpen && (
         <div ref={mobileMenuRef} className="md:hidden bg-gradient-to-b from-[#00001b] to-[#00002b] border-t border-white/10 shadow-xl animate-slideDown">
           <div className="flex flex-col py-4 px-4 space-y-2">

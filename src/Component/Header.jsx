@@ -22,9 +22,17 @@ const Header = () => {
     const [error, setError] = useState('')
     const [lastUpdated, setLastUpdated] = useState(null)
 
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003'
+// ADD THIS DEBUG CODE:
+console.log('=== BACKEND URL DEBUG ===')
+console.log('Raw VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL)
+console.log('All env vars:', import.meta.env)
+console.log('Final backendUrl:', backendUrl)
+console.log('========================')
+    // Function to fetch current price for a single stock
     const fetchSingleStockPrice = async (symbol) => {
         try {
-            const response = await axios.get('/api/stocks/quote', {
+            const response = await axios.get(`${backendUrl}/api/stocks/quote`, {
                 params: { symbol: symbol },
                 withCredentials: true,
                 timeout: 10000
@@ -40,6 +48,7 @@ const Header = () => {
         }
     }
 
+    // Function to fetch current prices for all holdings
     const fetchCurrentPrices = useCallback(async (holdings) => {
         if (!holdings || holdings.length === 0) return
         
@@ -47,12 +56,14 @@ const Header = () => {
         try {
             console.log(`Fetching real-time prices for ${holdings.length} stocks...`)
             
+            // Fetch prices for all stocks in parallel
             const pricePromises = holdings.map(holding => 
                 fetchSingleStockPrice(holding.stockName)
             )
             
             const prices = await Promise.all(pricePromises)
             
+            // Create prices object
             const newPrices = {}
             let successCount = 0
             
@@ -61,6 +72,7 @@ const Header = () => {
                     newPrices[holding.stockName] = prices[index]
                     successCount++
                 } else {
+                    // Fallback to average price if fetch fails
                     newPrices[holding.stockName] = holding.avgPrice
                 }
             })
@@ -69,6 +81,7 @@ const Header = () => {
             setLastUpdated(new Date())
             console.log(` Updated prices: ${successCount}/${holdings.length} stocks`)
             
+            // Update portfolio calculations with new prices
             updatePortfolioCalculations(holdings, newPrices)
             
         } catch (error) {
@@ -76,8 +89,9 @@ const Header = () => {
         } finally {
             setPricesLoading(false)
         }
-    }, [])
+    }, [backendUrl])
 
+    // Function to update portfolio calculations with current prices
     const updatePortfolioCalculations = (holdings, prices) => {
         let totalCurrentValue = 0
         let totalInvestment = 0
@@ -99,13 +113,14 @@ const Header = () => {
         }))
     }
 
+    // Function to fetch holdings data
     const fetchHoldingsData = async () => {
         setLoading(true)
         setError('')
         
         try {
             console.log('Fetching holdings data...')
-            const response = await axios.get('/api/orders/holdings', {
+            const response = await axios.get(`${backendUrl}/api/orders/holdings`, {
                 withCredentials: true,
                 timeout: 10000
             })
@@ -125,12 +140,13 @@ const Header = () => {
                     holdings,
                     currentBalance,
                     totalInvestment,
-                    totalCurrentValue: totalInvestment,
+                    totalCurrentValue: totalInvestment, // Will be updated with real prices
                     totalPnL: 0,
                     totalPnLPercentage: 0,
                     holdingsCount
                 })
                 
+                // Fetch current prices if there are holdings
                 if (holdings.length > 0) {
                     await fetchCurrentPrices(holdings)
                 }
@@ -145,8 +161,9 @@ const Header = () => {
         }
     }
 
+    // Manual refresh function
     const handleManualRefresh = async () => {
-        console.log('Manual refresh triggered')
+        console.log('🔄 Manual refresh triggered')
         if (holdingsData.holdings.length > 0) {
             await fetchCurrentPrices(holdingsData.holdings)
         } else {
@@ -154,21 +171,24 @@ const Header = () => {
         }
     }
 
+    // Initial fetch
     useEffect(() => {
         fetchHoldingsData()
     }, [])
 
+    // Auto-refresh every 30 seconds
     useEffect(() => {
         if (holdingsData.holdings.length > 0 && !pricesLoading) {
             const intervalId = setInterval(() => {
-                console.log('Auto-refreshing prices...')
+                console.log('🔄 Auto-refreshing prices...')
                 fetchCurrentPrices(holdingsData.holdings)
-            }, 30000)
+            }, 30000) // Update every 30 seconds
             
             return () => clearInterval(intervalId)
         }
     }, [holdingsData.holdings, fetchCurrentPrices, pricesLoading])
 
+    // Format number with K, M, B
     const formatNumber = (num) => {
         if (num >= 1000000000) {
             return (num / 1000000000).toFixed(2) + 'B'
@@ -186,6 +206,7 @@ const Header = () => {
     const marginUsed = holdingsData.totalInvestment
     const openingBalance = holdingsData.currentBalance + holdingsData.totalInvestment
 
+    // Stats Card Component
     const StatsCard = ({ icon, label, value, suffix = '', prefix = '', trend = null, isLoading = false }) => (
         <div className="bg-gradient-to-br from-gray-800/40 to-indigo-900/20 rounded-xl p-4 border border-white/10 hover:border-indigo-500/50 transition-all duration-300 hover:scale-[1.02]">
             <div className="flex items-center justify-between mb-2">
@@ -220,6 +241,7 @@ const Header = () => {
     return (
         <div className="w-full min-h-screen bg-gradient-to-br from-[#0a0a1a] via-[#0f0f1f] to-[#0a0a1a]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
+                {/* Welcome Section */}
                 <div className="mb-8 lg:mb-10">
                     <div className="bg-gradient-to-br from-gray-800/40 to-indigo-900/20 rounded-2xl p-5 sm:p-6 lg:p-8 border border-white/10 backdrop-blur-sm">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -227,6 +249,7 @@ const Header = () => {
                                 Welcome back, {userData ? userData.name.split(' ')[0] : 'Investor'}!
                             </h1>
                             
+                            {/* Refresh Button */}
                             <button
                                 onClick={handleManualRefresh}
                                 disabled={pricesLoading || loading}
@@ -253,6 +276,7 @@ const Header = () => {
                             </button>
                         </div>
                         
+                        {/* Last Updated Timestamp */}
                         {lastUpdated && !pricesLoading && !loading && (
                             <p className="text-xs text-gray-500 mt-2">
                                 Last updated: {lastUpdated.toLocaleTimeString()}
@@ -267,6 +291,7 @@ const Header = () => {
                 </div>
 
                 {loading ? (
+                    // Loading Skeleton
                     <div className="animate-pulse">
                         <div className="grid lg:grid-cols-2 gap-6">
                             <div className="space-y-6">
@@ -283,7 +308,9 @@ const Header = () => {
                     </div>
                 ) : (
                     <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
+                        {/* Left Column - Portfolio Stats */}
                         <div className="space-y-6">
+                            {/* Stats Grid */}
                             <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                 <StatsCard 
                                     icon={faClock} 
@@ -317,6 +344,7 @@ const Header = () => {
                                 />
                             </div>
 
+                            {/* Holdings Summary Card */}
                             <div className="bg-gradient-to-br from-gray-800/40 to-indigo-900/20 rounded-xl border border-white/10 backdrop-blur-sm overflow-hidden">
                                 <div className="p-5 border-b border-white/10">
                                     <div className="flex items-center justify-between">
@@ -351,6 +379,7 @@ const Header = () => {
                                         </div>
                                     ) : (
                                         <>
+                                            {/* Summary Stats */}
                                             <div className="grid grid-cols-2 gap-4 mb-5 pb-5 border-b border-white/10">
                                                 <div>
                                                     <p className="text-xs text-gray-400 mb-1">Current Value</p>
@@ -376,6 +405,7 @@ const Header = () => {
                                                 </div>
                                             </div>
                                             
+                                            {/* Recent Holdings Preview */}
                                             <div className="space-y-3">
                                                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Holdings</p>
                                                 {holdingsData.holdings.slice(0, 3).map((holding, index) => {
@@ -413,6 +443,7 @@ const Header = () => {
                                 </div>
                             </div>
 
+                            {/* Quick Actions */}
                             <div className="grid grid-cols-2 gap-3">
                                 <button 
                                     onClick={() => window.location.href = '/home/funds'}
@@ -450,6 +481,7 @@ const Header = () => {
                             )}
                         </div>
 
+                        {/* Right Column - Stock Search */}
                         <div className="lg:sticky lg:top-24">
                             <div className="bg-gradient-to-br from-gray-800/30 to-indigo-900/20 rounded-2xl border border-white/10 backdrop-blur-sm overflow-hidden h-full">
                                 <div className="p-4 sm:p-5">

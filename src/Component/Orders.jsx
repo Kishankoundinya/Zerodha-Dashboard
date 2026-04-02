@@ -7,7 +7,7 @@ const Orders = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
     console.log('Orders component mounted');
     console.log('Location state:', location.state);
     
@@ -40,14 +40,13 @@ const Orders = () => {
             const token = localStorage.getItem('token');
             
             const response = await axios.post(
-                '/api/orders/place-order',
+                `${BACKEND_URL}/api/orders/place-order`,
                 order,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
-                    },
-                    withCredentials: true
+                    }
                 }
             );
             
@@ -94,6 +93,7 @@ const Orders = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#0a0a1a] via-[#0f0f1f] to-[#0a0a1a] p-6">
             <div className="max-w-2xl mx-auto">
+                {/* Back Button */}
                 <button
                     onClick={() => navigate(-1)}
                     className="flex items-center gap-2 text-gray-400 hover:text-indigo-400 transition-colors mb-6 group"

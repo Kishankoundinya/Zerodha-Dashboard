@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const SellModal = ({ isOpen, onClose, stock, onSellSuccess }) => {
+const SellModal = ({ isOpen, onClose, stock, onSellSuccess, backendUrl }) => {
     const [quantity, setQuantity] = useState(1);
     const [sellingPrice, setSellingPrice] = useState('');
     const [currentPrice, setCurrentPrice] = useState(null);
@@ -9,6 +9,7 @@ const SellModal = ({ isOpen, onClose, stock, onSellSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // Fetch current price when modal opens
     useEffect(() => {
         if (isOpen && stock) {
             fetchCurrentPrice();
@@ -23,7 +24,7 @@ const SellModal = ({ isOpen, onClose, stock, onSellSuccess }) => {
         setPriceLoading(true);
         try {
             console.log(`Fetching current price for ${stock.stockName}...`);
-            const response = await axios.get('/api/stocks/quote', {
+            const response = await axios.get(`${backendUrl}/api/stocks/quote`, {
                 params: { symbol: stock.stockName },
                 withCredentials: true,
                 timeout: 10000
@@ -31,6 +32,7 @@ const SellModal = ({ isOpen, onClose, stock, onSellSuccess }) => {
             
             console.log(`Price response for ${stock.stockName}:`, response.data);
             
+            // Finnhub quote response structure: c = current price
             if (response.data && response.data.c) {
                 const price = response.data.c;
                 setCurrentPrice(price);
@@ -42,6 +44,7 @@ const SellModal = ({ isOpen, onClose, stock, onSellSuccess }) => {
         } catch (error) {
             console.error('Error fetching current price:', error);
             setError('Failed to fetch current price. Please enter price manually.');
+            // Don't set a default price, let user enter manually
             setCurrentPrice(null);
             setSellingPrice('');
         } finally {
@@ -80,9 +83,10 @@ const SellModal = ({ isOpen, onClose, stock, onSellSuccess }) => {
         const sellPrice = parseFloat(sellingPrice);
 
         try {
+            // Get the first transaction ID
             const transactionId = stock.transactions[0]._id;
 
-            const response = await axios.post('/api/orders/sell-stock', {
+            const response = await axios.post(`${backendUrl}/api/orders/sell-stock`, {
                 transactionId,
                 symbol: stock.stockName,
                 quantity: quantity,
@@ -125,6 +129,7 @@ const SellModal = ({ isOpen, onClose, stock, onSellSuccess }) => {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 animate-fadeIn">
             <div className="bg-gradient-to-br from-gray-900 to-indigo-950 rounded-xl border border-white/20 max-w-md w-full shadow-2xl animate-slideUp">
                 <div className="p-6">
+                    {/* Header */}
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-bold text-white">Sell {stock.stockName}</h2>
                         <button 
@@ -137,6 +142,7 @@ const SellModal = ({ isOpen, onClose, stock, onSellSuccess }) => {
                         </button>
                     </div>
 
+                    {/* Stock Info */}
                     <div className="bg-white/5 rounded-lg p-3 mb-4">
                         <div className="grid grid-cols-2 gap-3 text-sm">
                             <div>
@@ -150,6 +156,7 @@ const SellModal = ({ isOpen, onClose, stock, onSellSuccess }) => {
                         </div>
                     </div>
 
+                    {/* Current Market Price Section */}
                     <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-lg p-3 mb-4 border border-indigo-500/30">
                         <div className="flex justify-between items-center">
                             <div>
@@ -188,6 +195,7 @@ const SellModal = ({ isOpen, onClose, stock, onSellSuccess }) => {
                         )}
                     </div>
 
+                    {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -262,6 +270,7 @@ const SellModal = ({ isOpen, onClose, stock, onSellSuccess }) => {
                             )}
                         </div>
 
+                        {/* Summary */}
                         <div className="bg-white/5 rounded-lg p-3 space-y-2">
                             <h3 className="text-sm font-semibold text-white mb-2">Sell Summary</h3>
                             <div className="flex justify-between text-sm">
