@@ -18,8 +18,6 @@ const StockSearch = () => {
     const [marketStatus, setMarketStatus] = useState(null);
     const [apiStatus, setApiStatus] = useState(null);
 
-    const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
-
     useEffect(() => {
         testApiConnection();
         fetchMarketStatus();
@@ -27,24 +25,24 @@ const StockSearch = () => {
 
     const testApiConnection = async () => {
         try {
-            console.log('Testing API connection to:', API_BASE_URL);
-            const response = await axios.get(`${API_BASE_URL}/api/stocks/test`);
+            console.log('Testing API connection...');
+            const response = await axios.get('/api/stocks/test');
             console.log('API connection successful:', response.data);
             setApiStatus({ connected: true, message: 'Connected to API' });
         } catch (err) {
             console.error('API connection failed:', err);
             setApiStatus({
                 connected: false,
-                message: `Cannot connect to API at ${API_BASE_URL}. Make sure backend is running.`
+                message: 'Cannot connect to API. Make sure backend is running.'
             });
-            setError(`Cannot connect to backend server. Please ensure the backend is running on ${API_BASE_URL}`);
+            setError('Cannot connect to backend server. Please ensure the backend is running.');
         }
     };
 
     const fetchMarketStatus = async () => {
         try {
             console.log('Fetching market status...');
-            const response = await axios.get(`${API_BASE_URL}/api/stocks/market-status`);
+            const response = await axios.get('/api/stocks/market-status');
             console.log('Market status response:', response.data);
             setMarketStatus(response.data);
         } catch (err) {
@@ -64,7 +62,7 @@ const StockSearch = () => {
 
         try {
             console.log(`Searching for: ${searchQuery}`);
-            const response = await axios.get(`${API_BASE_URL}/api/stocks/search`, {
+            const response = await axios.get('/api/stocks/search', {
                 params: { query: searchQuery }
             });
             console.log('Search response:', response.data);
@@ -99,15 +97,15 @@ const StockSearch = () => {
             console.log(`Fetching data for symbol: ${symbol}`);
 
             const requests = [
-                axios.get(`${API_BASE_URL}/api/stocks/quote`, { params: { symbol } }).catch(err => {
+                axios.get('/api/stocks/quote', { params: { symbol } }).catch(err => {
                     console.error(`Quote fetch failed for ${symbol}:`, err);
                     return { data: null, error: err };
                 }),
-                axios.get(`${API_BASE_URL}/api/stocks/company-profile`, { params: { symbol } }).catch(err => {
+                axios.get('/api/stocks/company-profile', { params: { symbol } }).catch(err => {
                     console.error(`Profile fetch failed for ${symbol}:`, err);
                     return { data: null, error: err };
                 }),
-                axios.get(`${API_BASE_URL}/api/stocks/candles`, { params: { symbol, resolution: 'D' } }).catch(err => {
+                axios.get('/api/stocks/candles', { params: { symbol, resolution: 'D' } }).catch(err => {
                     console.error(`Candles fetch failed for ${symbol}:`, err);
                     return { data: null, error: err };
                 })
@@ -178,15 +176,15 @@ const StockSearch = () => {
     return (
         <div className="p-4">
             {apiStatus && !apiStatus.connected && (
-                <div className="border p-3 mb-4">
+                <div className="border p-3 mb-4 bg-red-50 text-red-700 rounded">
                     <p>{apiStatus.message}</p>
                 </div>
             )}
 
             {marketStatus && (
-                <div className="text-center p-2 mb-4 ">
+                <div className="text-center p-2 mb-4 bg-gray-100 rounded">
                     <span>Market Status: </span>
-                    <span className={marketStatus.isOpen ? 'text-green-600' : 'text-red-600'}>
+                    <span className={marketStatus.isOpen ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
                         {marketStatus.isOpen ? 'Open' : 'Closed'}
                     </span>
                 </div>
@@ -199,26 +197,26 @@ const StockSearch = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Enter stock symbol or company name (e.g., AAPL, Microsoft)"
-                    className="flex-1 p-2 border rounded-sm"
+                    className="flex-1 p-2 border rounded-sm bg-gray-800 text-white"
                 />
                 <button
                     onClick={handleSearch}
                     disabled={loading}
-                    className="px-4 py-2 bg-blue-600 text-white disabled:bg-gray-400 rounded-sm"
+                    className="px-4 py-2 bg-indigo-600 text-white disabled:bg-gray-400 rounded-sm hover:bg-indigo-700 transition"
                 >
                     {loading ? 'Searching...' : 'Search'}
                 </button>
             </div>
 
             {error && (
-                <div className="border p-3 mb-4 bg-red-50 text-red-700">
+                <div className="border p-3 mb-4 bg-red-500/10 text-red-400 rounded">
                     <strong>Error:</strong> {error}
                 </div>
             )}
 
             {searchResults.length > 0 && (
-                <div className="border p-3 mb-4">
-                    <h3 className="font-bold mb-2">
+                <div className="border p-3 mb-4 bg-gray-800/50 rounded">
+                    <h3 className="font-bold mb-2 text-white">
                         Search Results ({searchResults.length})
                     </h3>
                     <div>
@@ -226,10 +224,10 @@ const StockSearch = () => {
                             <div
                                 key={index}
                                 onClick={() => fetchStockData(result.symbol)}
-                                className="p-2 border-b cursor-pointer hover:bg-blue-500"
+                                className="p-2 border-b border-gray-700 cursor-pointer hover:bg-indigo-500/20 text-white"
                             >
                                 <strong>{result.symbol}</strong>
-                                <span> - {result.description}</span>
+                                <span className="text-gray-400"> - {result.description}</span>
                             </div>
                         ))}
                     </div>
@@ -237,14 +235,16 @@ const StockSearch = () => {
             )}
 
             {loading && (
-                <div className="text-center py-4">
+                <div className="text-center py-4 text-white">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-400 mx-auto mb-2"></div>
                     <div>Loading stock data...</div>
                 </div>
             )}
 
             {isNoStockSelected && !loading && !error && (
                 <div className="text-center py-4">
-                    <img className="mx-auto animate-pulse" src={stockImg} alt="" />
+                    <img className="mx-auto animate-pulse opacity-50" src={stockImg} alt="Search for stocks" />
+                    <p className="text-gray-500 mt-2">Search for a stock to get started</p>
                 </div>
             )}
 
@@ -261,11 +261,11 @@ const StockSearch = () => {
                                 />
                             )}
                             <div className="inline-block">
-                                <h2 className="text-xl font-bold">
+                                <h2 className="text-xl font-bold text-white">
                                     {stockData.profile?.name || selectedStock} ({selectedStock})
                                 </h2>
                                 {stockData.profile && (
-                                    <p className="text-gray-600">
+                                    <p className="text-gray-400">
                                         {stockData.profile.exchange} • {stockData.profile.industry}
                                     </p>
                                 )}
@@ -273,61 +273,61 @@ const StockSearch = () => {
                         </div>
                         <button
                             onClick={handleBuyClick}
-                            className="mt-2 w-full p-2 bg-green-600 text-white"
+                            className="mt-2 w-full p-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
                         >
                             Buy Now
                         </button>
                     </div>
 
-                    <div className="border p-3 mb-3">
+                    <div className="border p-3 mb-3 bg-gray-800/30 rounded">
                         <div className="text-center mb-2">
-                            <span>Current Price</span>
-                            <div className="text-2xl font-bold">{formatPrice(stockData.quote.c)}</div>
+                            <span className="text-gray-400">Current Price</span>
+                            <div className="text-2xl font-bold text-white">{formatPrice(stockData.quote.c)}</div>
                         </div>
                         <div className="text-center mb-3">
                             {formatChange(stockData.quote.d, stockData.quote.dp)}
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2 text-gray-300">
                             <div>
-                                <span>Open:</span>
+                                <span className="text-gray-400">Open:</span>
                                 <span className="ml-2 font-bold">{formatPrice(stockData.quote.o)}</span>
                             </div>
                             <div>
-                                <span>High:</span>
+                                <span className="text-gray-400">High:</span>
                                 <span className="ml-2 font-bold">{formatPrice(stockData.quote.h)}</span>
                             </div>
                             <div>
-                                <span>Low:</span>
+                                <span className="text-gray-400">Low:</span>
                                 <span className="ml-2 font-bold">{formatPrice(stockData.quote.l)}</span>
                             </div>
                             <div>
-                                <span>Prev Close:</span>
+                                <span className="text-gray-400">Prev Close:</span>
                                 <span className="ml-2 font-bold">{formatPrice(stockData.quote.pc)}</span>
                             </div>
                         </div>
                     </div>
 
                     {stockData.profile?.weburl && (
-                        <div className="border p-3">
-                            <p className="mb-1">
-                                <strong>Website:</strong>{' '}
+                        <div className="border p-3 bg-gray-800/30 rounded">
+                            <p className="mb-1 text-gray-300">
+                                <strong className="text-gray-400">Website:</strong>{' '}
                                 <a
                                     href={stockData.profile.weburl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-blue-600"
+                                    className="text-indigo-400 hover:text-indigo-300"
                                 >
                                     {stockData.profile.weburl}
                                 </a>
                             </p>
                             {stockData.profile.ipo && (
-                                <p className="mb-1">
-                                    <strong>IPO Date:</strong> {stockData.profile.ipo}
+                                <p className="mb-1 text-gray-300">
+                                    <strong className="text-gray-400">IPO Date:</strong> {stockData.profile.ipo}
                                 </p>
                             )}
                             {stockData.profile.marketCapitalization && (
-                                <p>
-                                    <strong>Market Cap:</strong> ${(stockData.profile.marketCapitalization / 1000000000).toFixed(2)}B
+                                <p className="text-gray-300">
+                                    <strong className="text-gray-400">Market Cap:</strong> ${(stockData.profile.marketCapitalization / 1000000000).toFixed(2)}B
                                 </p>
                             )}
                         </div>

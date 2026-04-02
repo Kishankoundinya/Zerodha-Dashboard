@@ -12,13 +12,10 @@ const Holdings = () => {
   const [pricesLoading, setPricesLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
-
-  // Function to fetch current price for a single stock
   const fetchSingleStockPrice = async (symbol) => {
     try {
       console.log(`Fetching price for ${symbol}...`);
-      const response = await axios.get(`${backendUrl}/api/stocks/quote`, {
+      const response = await axios.get('/api/stocks/quote', {
         params: { symbol: symbol },
         withCredentials: true,
         timeout: 10000
@@ -26,7 +23,6 @@ const Holdings = () => {
       
       console.log(`Price for ${symbol}:`, response.data);
       
-      // Finnhub quote response structure: c = current price
       if (response.data && response.data.c) {
         return response.data.c;
       }
@@ -37,7 +33,6 @@ const Holdings = () => {
     }
   };
 
-  // Function to fetch current prices for all holdings
   const fetchCurrentPrices = useCallback(async (holdingsData, showLoading = true) => {
     if (!holdingsData || holdingsData.length === 0) {
       console.log('No holdings data to fetch prices for');
@@ -52,14 +47,12 @@ const Holdings = () => {
       console.log(`Fetching current prices for ${holdingsData.length} stocks...`);
       console.log('Stock symbols:', holdingsData.map(h => h.stockName));
       
-      // Fetch prices for all stocks in parallel
       const pricePromises = holdingsData.map(holding => 
         fetchSingleStockPrice(holding.stockName)
       );
       
       const prices = await Promise.all(pricePromises);
       
-      // Create prices object
       const newPrices = {};
       let successCount = 0;
       
@@ -69,7 +62,6 @@ const Holdings = () => {
           successCount++;
           console.log(`${holding.stockName}: Current price = ${prices[index]}`);
         } else {
-          // Fallback to average price if fetch fails
           newPrices[holding.stockName] = holding.avgPrice;
           console.log(`${holding.stockName}: Using average price ${holding.avgPrice}`);
         }
@@ -81,7 +73,6 @@ const Holdings = () => {
       
     } catch (error) {
       console.error('Error fetching current prices:', error);
-      // Fallback to using average price
       const fallbackPrices = {};
       holdingsData.forEach(holding => {
         fallbackPrices[holding.stockName] = holding.avgPrice;
@@ -92,7 +83,7 @@ const Holdings = () => {
         setPricesLoading(false);
       }
     }
-  }, [backendUrl]);
+  }, []);
 
   const fetchHoldings = async () => {
     console.log('Fetching holdings...');
@@ -100,10 +91,9 @@ const Holdings = () => {
     setError('');
     
     try {
-      const url = `${backendUrl}/api/orders/holdings`;
-      console.log('Making GET request to:', url);
+      console.log('Making GET request to: /api/orders/holdings');
       
-      const response = await axios.get(url, {
+      const response = await axios.get('/api/orders/holdings', {
         withCredentials: true,
         timeout: 10000
       });
@@ -117,7 +107,6 @@ const Holdings = () => {
         setHoldings(holdingsData);
         
         if (holdingsData.length > 0) {
-          // Fetch current prices after getting holdings
           await fetchCurrentPrices(holdingsData, true);
         } else {
           console.log('No holdings found');
@@ -140,7 +129,6 @@ const Holdings = () => {
     }
   };
 
-  // Manual refresh function
   const handleManualRefresh = async () => {
     console.log('🔄 Manual refresh triggered');
     if (holdings.length > 0) {
@@ -150,18 +138,16 @@ const Holdings = () => {
     }
   };
 
-  // Initial fetch
   useEffect(() => {
     console.log('Holdings component mounted');
     fetchHoldings();
   }, []);
 
-  // Auto-refresh every 60 seconds
   useEffect(() => {
     if (holdings.length > 0 && !pricesLoading) {
       const intervalId = setInterval(() => {
         console.log('🔄 Auto-refreshing prices...');
-        fetchCurrentPrices(holdings, false); // Don't show loading for auto-refresh
+        fetchCurrentPrices(holdings, false);
       }, 60000);
       
       return () => clearInterval(intervalId);
@@ -174,7 +160,6 @@ const Holdings = () => {
   };
 
   const handleSellSuccess = () => {
-    // Refresh holdings after successful sale
     fetchHoldings();
     setIsModalOpen(false);
   };
@@ -200,7 +185,6 @@ const Holdings = () => {
   const totalProfitLoss = totalCurrentValue - totalInvestment;
   const totalProfitLossPercentage = totalInvestment > 0 ? (totalProfitLoss / totalInvestment) * 100 : 0;
 
-  // Debug: Log current state
   console.log('Holdings state:', { 
     loading, 
     holdingsCount: holdings.length, 
@@ -254,7 +238,6 @@ const Holdings = () => {
 
   return (
     <div className='w-full px-4 sm:px-6 lg:px-8 py-6'>
-      {/* Header Section */}
       <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-white/10'>
         <div>
           <h1 className='text-2xl sm:text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent'>
@@ -275,7 +258,6 @@ const Holdings = () => {
           </p>
         </div>
         
-        {/* Summary Cards */}
         <div className='flex gap-3 mt-4 sm:mt-0'>
           <div className='text-right'>
             <p className='text-xs text-gray-400'>Total Investment</p>
@@ -295,7 +277,6 @@ const Holdings = () => {
         </div>
       </div>
 
-      {/* Refresh Button Bar */}
       <div className='mb-6 flex justify-end'>
         <button
           onClick={handleManualRefresh}
@@ -328,10 +309,8 @@ const Holdings = () => {
         </button>
       </div>
 
-      {/* Desktop Table View */}
       <div className='hidden lg:block overflow-x-auto'>
         <div className='min-w-full'>
-          {/* Table Header */}
           <div className='flex w-full bg-gradient-to-r from-gray-800/50 to-indigo-900/30 rounded-t-xl border border-white/10'>
             <p className='text-xs font-semibold w-[10%] p-3 text-gray-300'>Instrument</p>
             <p className='text-xs font-semibold w-[8%] p-3 text-gray-300'>Qty.</p>
@@ -344,7 +323,6 @@ const Holdings = () => {
             <p className='text-xs font-semibold w-[8%] p-3 text-gray-300'>Action</p>
           </div>
 
-          {/* Table Body */}
           <div className='border-x border-b border-white/10 rounded-b-xl overflow-hidden'>
             {holdings.map((holding, index) => {
               const { pnl, pnlPercentage, currentValue, currentPrice } = calculatePnL(holding);
@@ -381,7 +359,6 @@ const Holdings = () => {
         </div>
       </div>
 
-      {/* Mobile Card View */}
       <div className='lg:hidden space-y-4'>
         {holdings.map((holding, index) => {
           const { pnl, pnlPercentage, currentValue, currentPrice } = calculatePnL(holding);
@@ -436,7 +413,6 @@ const Holdings = () => {
         })}
       </div>
 
-      {/* Summary Section */}
       <div className='mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
         <div className='bg-gradient-to-br from-gray-800/30 to-indigo-900/30 border border-white/10 rounded-xl p-4 hover:scale-105 transition-all duration-300'>
           <p className='text-xs text-gray-400 mb-1'>Total Investment</p>
@@ -463,13 +439,11 @@ const Holdings = () => {
         </div>
       </div>
 
-      {/* Sell Modal */}
       <SellModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         stock={selectedStock}
         onSellSuccess={handleSellSuccess}
-        backendUrl={backendUrl}
       />
     </div>
   );
