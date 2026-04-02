@@ -10,7 +10,7 @@ import { toast } from 'react-toastify';
 
 const Login = () => {
     const navigate = useNavigate()
-    const { setIsLoggedin, getUserData, setUserData } = useContext(AppContent) // Changed: removed 'login'
+    const { setIsLoggedin, getUserData, setUserData, clearAuthData } = useContext(AppContent) // Added clearAuthData
     const [state, setState] = useState("Sign Up")
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
@@ -23,10 +23,14 @@ const Login = () => {
         try {
             if (state === 'Sign Up') {
                 const { data } = await axios.post('/api/auth/register', 
-                    { name, email, password }
+                    { name, email, password },
+                    { withCredentials: true }
                 )
                 if (data.success) {
-                    // Store user data
+                    // Clear any existing data first
+                    clearAuthData();
+                    
+                    // Store new user data
                     if (data.userData) {
                         localStorage.setItem('userData', JSON.stringify(data.userData));
                         setUserData(data.userData);
@@ -44,8 +48,11 @@ const Login = () => {
                     toast.error(data.message)
                 }
             } else {
-                // LOGIN - THIS IS WHERE THE CHANGE IS NEEDED
+                // LOGIN - Clear old data first
                 console.log('Logging in with:', email);
+                
+                // IMPORTANT: Clear old user data before login
+                clearAuthData();
                 
                 const { data } = await axios.post('/api/auth/login', 
                     { email, password },
@@ -57,6 +64,9 @@ const Login = () => {
                 console.log('Login response:', data);
                 
                 if (data.success) {
+                    // Clear any existing token first
+                    localStorage.removeItem('authToken');
+                    
                     // Store token if backend returns one
                     if (data.token) {
                         localStorage.setItem('authToken', data.token);
@@ -64,7 +74,7 @@ const Login = () => {
                         axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
                     }
                     
-                    // Store user data
+                    // Store new user data
                     if (data.userData) {
                         localStorage.setItem('userData', JSON.stringify(data.userData));
                         setUserData(data.userData);
@@ -73,11 +83,15 @@ const Login = () => {
                     setIsLoggedin(true);
                     localStorage.setItem('isLoggedin', 'true');
                     
-                    // Also try to fetch fresh user data
+                    // Fetch fresh user data to ensure everything is up to date
                     await getUserData();
                     
-                    toast.success('Login successful!');
-                    navigate('/home');
+                    toast.success(`Welcome back, ${data.userData?.name || 'User'}!`);
+                    
+                    // Small delay to ensure state is updated
+                    setTimeout(() => {
+                        navigate('/home');
+                    }, 100);
                 } else {
                     toast.error(data.message || 'Login failed');
                 }
