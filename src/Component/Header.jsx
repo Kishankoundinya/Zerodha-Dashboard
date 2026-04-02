@@ -23,7 +23,12 @@ const Header = () => {
     const [lastUpdated, setLastUpdated] = useState(null)
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003'
-
+// ADD THIS DEBUG CODE:
+console.log('=== BACKEND URL DEBUG ===')
+console.log('Raw VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL)
+console.log('All env vars:', import.meta.env)
+console.log('Final backendUrl:', backendUrl)
+console.log('========================')
     // Function to fetch current price for a single stock
     const fetchSingleStockPrice = async (symbol) => {
         try {
@@ -74,7 +79,7 @@ const Header = () => {
             
             setCurrentPrices(newPrices)
             setLastUpdated(new Date())
-            console.log(`✅ Updated prices: ${successCount}/${holdings.length} stocks`)
+            console.log(` Updated prices: ${successCount}/${holdings.length} stocks`)
             
             // Update portfolio calculations with new prices
             updatePortfolioCalculations(holdings, newPrices)
