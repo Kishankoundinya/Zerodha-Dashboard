@@ -56,11 +56,11 @@ const AppContextProvider = (props) => {
 
   const getAuthState = async () => {
     try {
-      const { data } = await axios.get('/api/auth/is-auth', { withCredentials: true });
+      const { data } = await axios.get('/api/auth/is-auth');
       if (data.success) {
         setIsLoggedin(true);
         localStorage.setItem('isLoggedin', 'true');
-        await getUserData(); // Fetch fresh user data
+        await getUserData();
       } else {
         // Clear if API says not authenticated
         clearAuthData();
@@ -77,15 +77,13 @@ const AppContextProvider = (props) => {
 
   const getUserData = async () => {
     try {
-      const { data } = await axios.get('/api/user/data', { withCredentials: true });
+      const { data } = await axios.get('/api/user/data');
       if (data.success) {
         setUserData(data.userData);
         localStorage.setItem('userData', JSON.stringify(data.userData));
-        return data.userData;
       } else {
         toast.error(data.message);
         clearAuthData();
-        return null;
       }
     } catch (error) {
       // Don't toast for network errors during auto-check
@@ -95,81 +93,32 @@ const AppContextProvider = (props) => {
       if (error.response?.status === 401) {
         clearAuthData();
       }
-      return null;
     }
   };
 
   const clearAuthData = () => {
-    // Clear all user-related data from localStorage
     localStorage.removeItem('isLoggedin');
     localStorage.removeItem('userData');
-    localStorage.removeItem('authToken'); // Clear any token if stored
-    localStorage.removeItem('holdings'); // Clear cached holdings
-    localStorage.removeItem('transactions'); // Clear cached transactions
-    
-    // Clear sessionStorage if used
-    sessionStorage.clear();
-    
     setIsLoggedin(false);
     setUserData(null);
-    
-    console.log('All auth data cleared');
   };
 
   const logout = async () => {
     try {
-      await axios.post('/api/auth/logout', {}, { withCredentials: true });
-      toast.success("Logged out successfully");
+      await axios.post('/api/auth/logout');
     } catch (error) {
       console.error("Logout API error:", error);
-      toast.error("Error during logout");
     } finally {
       clearAuthData();
-      // Force redirect to login
-      window.location.href = '/login';
+      toast.success("Logged out successfully");
     }
   };
 
-  // UPDATED: Login function that fetches fresh data from backend
-  const login = async (email, password) => {
-    try {
-      console.log('Logging in with:', email);
-      
-      const { data } = await axios.post('/api/auth/login', 
-        { email, password },
-        { withCredentials: true }
-      );
-      
-      console.log('Login response:', data);
-      
-      if (data.success) {
-        // Clear old data first
-        clearAuthData();
-        
-        // Store new user data
-        if (data.userData) {
-          setUserData(data.userData);
-          localStorage.setItem('userData', JSON.stringify(data.userData));
-        }
-        
-        setIsLoggedin(true);
-        localStorage.setItem('isLoggedin', 'true');
-        
-        // Fetch fresh user data to ensure everything is up to date
-        await getUserData();
-        
-        toast.success('Login successful!');
-        return true;
-      } else {
-        toast.error(data.message || 'Login failed');
-        return false;
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      const errorMsg = error.response?.data?.message || error.message || 'Login failed';
-      toast.error(errorMsg);
-      return false;
-    }
+  const login = (userData) => {
+    setUserData(userData);
+    setIsLoggedin(true);
+    localStorage.setItem('isLoggedin', 'true');
+    localStorage.setItem('userData', JSON.stringify(userData));
   };
 
   // Check auth on mount if we think we're logged in
