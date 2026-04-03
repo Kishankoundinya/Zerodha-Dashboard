@@ -5,13 +5,11 @@ import { AppContent } from "./AppContext";
 import { useEffect } from "react";
 
 const AppContextProvider = (props) => {
-  // Fix: Remove trailing slash from backendUrl if it exists
   let backendUrl = import.meta.env.VITE_BACKEND_URL;
   if (backendUrl && backendUrl.endsWith('/')) {
     backendUrl = backendUrl.slice(0, -1);
   }
   
-  // Initialize from localStorage for immediate access
   const [isLoggedin, setIsLoggedin] = useState(() => {
     return localStorage.getItem('isLoggedin') === 'true';
   });
@@ -28,32 +26,29 @@ const AppContextProvider = (props) => {
   // Configure axios defaults
   axios.defaults.withCredentials = true;
   axios.defaults.baseURL = backendUrl;
-  axios.defaults.timeout = 30000; // 30 second timeout
+  axios.defaults.timeout = 30000;
   axios.defaults.headers.common['Content-Type'] = 'application/json';
 
-  // Add token to all requests from localStorage
+  // Add token to EVERY request
   axios.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem('authToken');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
-      console.log(`Making ${config.method.toUpperCase()} request to: ${config.baseURL}${config.url}`);
       return config;
     },
-    (error) => {
-      return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
   );
 
-  // Add response interceptor for debugging
+  // Handle 401 responses
   axios.interceptors.response.use(
-    (response) => {
-      console.log(`Response from ${response.config.url}:`, response.status);
-      return response;
-    },
+    (response) => response,
     (error) => {
-      console.error(`API Error for ${error.config?.url}:`, error.message);
+      if (error.response?.status === 401) {
+        clearAuthData();
+        window.location.href = '/login';
+      }
       return Promise.reject(error);
     }
   );
@@ -67,14 +62,11 @@ const AppContextProvider = (props) => {
         setUserData(data.userData);
         localStorage.setItem('userData', JSON.stringify(data.userData));
       } else {
-        // Clear if API says not authenticated
         clearAuthData();
       }
     } catch (error) {
       console.error("Auth check failed:", error.message);
-      // Don't clear on network errors - keep optimistic state
       if (error.response?.status === 401) {
-        // Unauthorized - clear auth data
         clearAuthData();
       }
     }
@@ -86,22 +78,17 @@ const AppContextProvider = (props) => {
       if (data.success) {
         setUserData(data.userData);
         localStorage.setItem('userData', JSON.stringify(data.userData));
-      } else {
-        toast.error(data.message);
-        clearAuthData();
+        return data.userData;
       }
+      return null;
     } catch (error) {
-      // Don't toast for network errors during auto-check
-      if (error.response?.status !== 401 && error.response?.status !== 403) {
-        toast.error(error.message);
-      }
-      if (error.response?.status === 401) {
-        clearAuthData();
-      }
+      console.error('Error fetching user data:', error);
+      return null;
     }
   };
 
   const clearAuthData = () => {
+    console.log('Clearing all auth data');
     localStorage.removeItem('isLoggedin');
     localStorage.removeItem('userData');
     localStorage.removeItem('authToken');
@@ -113,30 +100,42 @@ const AppContextProvider = (props) => {
     try {
       await axios.post('/api/auth/logout');
     } catch (error) {
-      console.error("Logout API error:", error);
+      console.error("Logout error:", error);
     } finally {
       clearAuthData();
       toast.success("Logged out successfully");
+      window.location.href = '/login';
     }
   };
 
-  // FIXED: Login function now accepts and stores token
   const login = (userData, token) => {
+    console.log('=== LOGIN - Setting new user data ===');
+    console.log('New User ID:', userData?._id);
+    console.log('New User Email:', userData?.email);
+    console.log('New User Balance:', userData?.balance);
+    console.log('New User Verified:', userData?.isAccountVerified);
+    
+    // CRITICAL: Clear ALL old data first
+    clearAuthData();
+    
+    // Then set new data
     setUserData(userData);
     setIsLoggedin(true);
     localStorage.setItem('isLoggedin', 'true');
     localStorage.setItem('userData', JSON.stringify(userData));
     
-    // Store token if provided
     if (token) {
       localStorage.setItem('authToken', token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
+    
+    // Verify storage
+    console.log('Stored user data:', JSON.parse(localStorage.getItem('userData')));
   };
 
-  // Check auth on mount if we think we're logged in
   useEffect(() => {
-    if (isLoggedin || localStorage.getItem('isLoggedin') === 'true') {
+    const token = localStorage.getItem('authToken');
+    if (token) {
       getAuthState();
     }
   }, []);

@@ -10,19 +10,12 @@ import { toast } from 'react-toastify';
 
 const Login = () => {
     const navigate = useNavigate()
-    const { setIsLoggedin, getUserData, setUserData, backendUrl, login } = useContext(AppContent) // Added login and backendUrl
+    const { backendUrl, login } = useContext(AppContent)
     const [state, setState] = useState("Sign Up")
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
-
-    // Configure axios for each request (or use the one from context)
-    const api = axios.create({
-        baseURL: backendUrl,
-        withCredentials: true,
-        headers: { 'Content-Type': 'application/json' }
-    });
 
     const onSubmitHandler = async (e) => {
         e.preventDefault();
@@ -30,56 +23,57 @@ const Login = () => {
         
         try {
             if (state === 'Sign Up') {
-                console.log('Registering with:', { name, email, password });
+                console.log('=== REGISTRATION ===');
+                console.log('Email:', email);
                 
-                const { data } = await api.post('/api/auth/register', { 
+                const response = await axios.post(`${backendUrl}/api/auth/register`, { 
                     name, email, password 
+                }, {
+                    withCredentials: true,
+                    headers: { 'Content-Type': 'application/json' }
                 })
                 
-                console.log('Registration response:', data);
+                console.log('Registration Response:', response.data);
                 
-                if (data.success) {
-                    // Use the login function from context
-                    login(data.userData);
-                    
+                if (response.data.success) {
+                    console.log('User created with ID:', response.data.userData?._id);
+                    login(response.data.userData, response.data.token);
                     toast.success('Account created successfully!');
-                    
-                    // Small delay before navigation
                     setTimeout(() => {
                         navigate('/home');
                     }, 500);
                 } else {
-                    toast.error(data.message || 'Registration failed');
+                    toast.error(response.data.message || 'Registration failed');
                 }
             } else {
-                // LOGIN
-                console.log('Logging in with:', { email, password });
+                console.log('=== LOGIN ===');
+                console.log('Email:', email);
                 
-                const { data } = await api.post('/api/auth/login', { 
+                const response = await axios.post(`${backendUrl}/api/auth/login`, { 
                     email, password 
+                }, {
+                    withCredentials: true,
+                    headers: { 'Content-Type': 'application/json' }
                 })
                 
-                console.log('Login response:', data);
+                console.log('Login Response:', response.data);
+                console.log('User ID from response:', response.data.userData?._id);
+                console.log('User Email from response:', response.data.userData?.email);
                 
-                if (data.success) {
-                    // Use the login function from context
-                    login(data.userData);
-                    
+                if (response.data.success) {
+                    login(response.data.userData, response.data.token);
                     toast.success('Login successful!');
                     navigate('/home');
                 } else {
-                    toast.error(data.message || 'Login failed');
+                    toast.error(response.data.message || 'Login failed');
                 }
             }
         } catch (error) {
             console.error('Auth error:', error);
-            
             if (error.response) {
-                console.log('Server response:', error.response.data);
                 toast.error(error.response.data?.message || 'Server error occurred');
             } else if (error.request) {
-                console.log('No response. Backend URL:', backendUrl);
-                toast.error(`Cannot connect to server at ${backendUrl}. Please check if backend is running.`);
+                toast.error(`Cannot connect to server. Please check if backend is running.`);
             } else {
                 toast.error(error.message || 'An error occurred');
             }
@@ -166,7 +160,6 @@ const Login = () => {
                             <span 
                                 onClick={() => {
                                     setState(state === 'Sign Up' ? 'Login' : 'Sign Up');
-                                    // Clear form when switching modes
                                     setName('');
                                     setEmail('');
                                     setPassword('');

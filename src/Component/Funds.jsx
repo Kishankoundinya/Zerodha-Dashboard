@@ -16,7 +16,7 @@ import {
 import { AppContent } from '../Context/AppContext';
 
 const Funds = () => {
-  const { userData } = useContext(AppContent);
+  const { userData, setUserData } = useContext(AppContent);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -27,45 +27,7 @@ const Funds = () => {
   const [transactionHistory, setTransactionHistory] = useState([]);
   const [processing, setProcessing] = useState(false);
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
-
-  // CREATE API INSTANCE WITH TOKEN INTERCEPTOR
-  const api = axios.create({
-    baseURL: backendUrl,
-    withCredentials: true,
-    headers: { 'Content-Type': 'application/json' }
-  });
-
-  // CRITICAL: Add token to every request
-  api.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-        console.log('✅ Funds - Token added for:', config.url);
-      } else {
-        console.log('❌ Funds - No token for:', config.url);
-      }
-      return config;
-    },
-    (error) => Promise.reject(error)
-  );
-
-  // Handle 401 responses - redirect to login
-  api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      if (error.response?.status === 401) {
-        console.log('Unauthorized - redirecting to login');
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('isLoggedin');
-        localStorage.removeItem('userData');
-        window.location.href = '/login';
-      }
-      return Promise.reject(error);
-    }
-  );
-
+  // Fetch fresh data on component mount
   useEffect(() => {
     fetchBalance();
     fetchTransactionHistory();
@@ -73,7 +35,9 @@ const Funds = () => {
 
   const fetchBalance = async () => {
     try {
-      const response = await api.get('/api/user/balance');
+      const response = await axios.get('/api/user/balance', {
+        withCredentials: true
+      });
       
       if (response.data.success) {
         setBalance(response.data.data.balance);
@@ -88,13 +52,29 @@ const Funds = () => {
 
   const fetchTransactionHistory = async () => {
     try {
-      const response = await api.get('/api/user/transactions');
+      const response = await axios.get('/api/user/transactions', {
+        withCredentials: true
+      });
       
       if (response.data.success) {
-        setTransactionHistory(response.data.data.transactions);
+        setTransactionHistory(response.data.data.transactions || []);
       }
     } catch (error) {
       console.error('Error fetching transaction history:', error);
+    }
+  };
+
+  const refreshUserData = async () => {
+    try {
+      const response = await axios.get('/api/user/data', {
+        withCredentials: true
+      });
+      if (response.data.success) {
+        setUserData(response.data.userData);
+        localStorage.setItem('userData', JSON.stringify(response.data.userData));
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
     }
   };
 
@@ -112,8 +92,9 @@ const Funds = () => {
     setSuccess('');
 
     try {
-      const response = await api.post('/api/user/add-balance', 
-        { amount: amountNum }
+      const response = await axios.post('/api/user/add-balance', 
+        { amount: amountNum },
+        { withCredentials: true }
       );
       
       if (response.data.success) {
@@ -121,7 +102,8 @@ const Funds = () => {
         setBalance(response.data.data.newBalance);
         setAmount('');
         setShowAddModal(false);
-        fetchTransactionHistory();
+        await fetchTransactionHistory();
+        await refreshUserData();
       } else {
         setError(response.data.message || 'Failed to add balance');
       }
@@ -152,8 +134,9 @@ const Funds = () => {
     setSuccess('');
 
     try {
-      const response = await api.post('/api/user/withdraw-balance',
-        { amount: amountNum }
+      const response = await axios.post('/api/user/withdraw-balance',
+        { amount: amountNum },
+        { withCredentials: true }
       );
       
       if (response.data.success) {
@@ -161,7 +144,8 @@ const Funds = () => {
         setBalance(response.data.data.newBalance);
         setAmount('');
         setShowWithdrawModal(false);
-        fetchTransactionHistory();
+        await fetchTransactionHistory();
+        await refreshUserData();
       } else {
         setError(response.data.message || 'Failed to withdraw balance');
       }
@@ -202,7 +186,6 @@ const Funds = () => {
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
-      {/* Header Section */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
           Funds Management
@@ -210,16 +193,13 @@ const Funds = () => {
         <p className="text-gray-400 mt-2">Manage your account balance and view transactions</p>
       </div>
 
-      {/* Success/Error Messages */}
       {success && (
         <div className="mb-6 bg-green-500/10 border border-green-500/50 rounded-lg p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FontAwesomeIcon icon={faCheckCircle} className="text-green-400 text-xl" />
             <p className="text-green-400">{success}</p>
           </div>
-          <button onClick={() => setSuccess('')} className="text-green-400 hover:text-green-300">
-            ×
-          </button>
+          <button onClick={() => setSuccess('')} className="text-green-400 hover:text-green-300">×</button>
         </div>
       )}
 
@@ -229,15 +209,11 @@ const Funds = () => {
             <FontAwesomeIcon icon={faTimesCircle} className="text-red-400 text-xl" />
             <p className="text-red-400">{error}</p>
           </div>
-          <button onClick={() => setError('')} className="text-red-400 hover:text-red-300">
-            ×
-          </button>
+          <button onClick={() => setError('')} className="text-red-400 hover:text-red-300">×</button>
         </div>
       )}
 
-      {/* Account Info Card */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Balance Card */}
         <div className="bg-gradient-to-br from-gray-800/50 to-indigo-900/30 rounded-2xl border border-white/10 backdrop-blur-sm p-6 hover:scale-[1.02] transition-all duration-300">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -251,7 +227,6 @@ const Funds = () => {
             </div>
           </div>
           
-          {/* Smaller Buttons */}
           <div className="flex gap-3 mt-6">
             <button
               onClick={() => setShowAddModal(true)}
@@ -275,7 +250,6 @@ const Funds = () => {
           </div>
         </div>
 
-        {/* Account Details Card */}
         <div className="bg-gradient-to-br from-gray-800/50 to-indigo-900/30 rounded-2xl border border-white/10 backdrop-blur-sm p-6">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <FontAwesomeIcon icon={faIndianRupeeSign} className="text-indigo-400" />
@@ -292,18 +266,19 @@ const Funds = () => {
               <span className="text-white">{userData?.email || 'user@example.com'}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-white/10">
-              <span className="text-gray-400">Available Balance</span>
-              <span className="text-green-400 font-bold">₹ {balance.toFixed(2)}</span>
+              <span className="text-gray-400">Account Verified</span>
+              <span className={userData?.isAccountVerified ? 'text-green-400' : 'text-yellow-400'}>
+                {userData?.isAccountVerified ? 'Verified' : 'Not Verified'}
+              </span>
             </div>
             <div className="flex justify-between items-center py-2">
-              <span className="text-gray-400">Total Transactions</span>
-              <span className="text-white">{transactionHistory.length}</span>
+              <span className="text-gray-400">Available Balance</span>
+              <span className="text-green-400 font-bold">₹ {balance.toFixed(2)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Transaction History */}
       <div className="bg-gradient-to-br from-gray-800/50 to-indigo-900/30 rounded-2xl border border-white/10 backdrop-blur-sm p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 flex items-center justify-center">
@@ -338,23 +313,23 @@ const Funds = () => {
                           {transaction.type}
                         </span>
                       </div>
-                     </td>
+                    </td>
                     <td className="py-3">
                       <span className={transaction.type === 'credit' ? 'text-green-400' : 'text-red-400'}>
                         {transaction.type === 'credit' ? '+' : '-'} ₹ {transaction.amount.toFixed(2)}
                       </span>
-                     </td>
+                    </td>
                     <td className="py-3 text-gray-400 text-sm">
                       <div className="flex items-center gap-2">
                         <FontAwesomeIcon icon={faClock} className="text-xs" />
                         {formatDate(transaction.date)}
                       </div>
-                     </td>
+                    </td>
                     <td className="py-3">
                       <span className="text-green-400 text-sm bg-green-500/20 px-2 py-1 rounded-full">
                         Completed
                       </span>
-                     </td>
+                    </td>
                   </tr>
                 ))}
               </tbody>
