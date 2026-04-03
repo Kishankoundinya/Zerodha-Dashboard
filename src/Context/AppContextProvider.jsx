@@ -31,9 +31,13 @@ const AppContextProvider = (props) => {
   axios.defaults.timeout = 30000; // 30 second timeout
   axios.defaults.headers.common['Content-Type'] = 'application/json';
 
-  // Add request interceptor for debugging
+  // Add token to all requests from localStorage
   axios.interceptors.request.use(
     (config) => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
       console.log(`Making ${config.method.toUpperCase()} request to: ${config.baseURL}${config.url}`);
       return config;
     },
@@ -60,7 +64,8 @@ const AppContextProvider = (props) => {
       if (data.success) {
         setIsLoggedin(true);
         localStorage.setItem('isLoggedin', 'true');
-        await getUserData();
+        setUserData(data.userData);
+        localStorage.setItem('userData', JSON.stringify(data.userData));
       } else {
         // Clear if API says not authenticated
         clearAuthData();
@@ -99,6 +104,7 @@ const AppContextProvider = (props) => {
   const clearAuthData = () => {
     localStorage.removeItem('isLoggedin');
     localStorage.removeItem('userData');
+    localStorage.removeItem('authToken');
     setIsLoggedin(false);
     setUserData(null);
   };
@@ -114,11 +120,18 @@ const AppContextProvider = (props) => {
     }
   };
 
-  const login = (userData) => {
+  // FIXED: Login function now accepts and stores token
+  const login = (userData, token) => {
     setUserData(userData);
     setIsLoggedin(true);
     localStorage.setItem('isLoggedin', 'true');
     localStorage.setItem('userData', JSON.stringify(userData));
+    
+    // Store token if provided
+    if (token) {
+      localStorage.setItem('authToken', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
   };
 
   // Check auth on mount if we think we're logged in

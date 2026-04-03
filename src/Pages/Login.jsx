@@ -10,71 +10,60 @@ import { toast } from 'react-toastify';
 
 const Login = () => {
     const navigate = useNavigate()
-    const { setIsLoggedin, getUserData, setUserData } = useContext(AppContent) // Changed: removed 'login'
+    const { setIsLoggedin, getUserData, setUserData, backendUrl, login } = useContext(AppContent) // Added login and backendUrl
     const [state, setState] = useState("Sign Up")
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
-    const frontendUrl = import.meta.env.VITE_FRONTEND_URL 
+    const [loading, setLoading] = useState(false)
+
+    // Configure axios for each request (or use the one from context)
+    const api = axios.create({
+        baseURL: backendUrl,
+        withCredentials: true,
+        headers: { 'Content-Type': 'application/json' }
+    });
 
     const onSubmitHandler = async (e) => {
         e.preventDefault();
+        setLoading(true);
         
         try {
             if (state === 'Sign Up') {
-                const { data } = await axios.post('/api/auth/register', 
-                    { name, email, password }
-                )
+                console.log('Registering with:', { name, email, password });
+                
+                const { data } = await api.post('/api/auth/register', { 
+                    name, email, password 
+                })
+                
+                console.log('Registration response:', data);
+                
                 if (data.success) {
-                    // Store user data
-                    if (data.userData) {
-                        localStorage.setItem('userData', JSON.stringify(data.userData));
-                        setUserData(data.userData);
-                    }
-                    
-                    setIsLoggedin(true);
-                    localStorage.setItem('isLoggedin', 'true');
+                    // Use the login function from context
+                    login(data.userData);
                     
                     toast.success('Account created successfully!');
                     
+                    // Small delay before navigation
                     setTimeout(() => {
-                        navigate('/home')
+                        navigate('/home');
                     }, 500);
                 } else {
-                    toast.error(data.message)
+                    toast.error(data.message || 'Registration failed');
                 }
             } else {
-                // LOGIN - THIS IS WHERE THE CHANGE IS NEEDED
-                console.log('Logging in with:', email);
+                // LOGIN
+                console.log('Logging in with:', { email, password });
                 
-                const { data } = await axios.post('/api/auth/login', 
-                    { email, password },
-                    { 
-                        withCredentials: true  // IMPORTANT: This ensures cookies are sent/received
-                    }
-                )
+                const { data } = await api.post('/api/auth/login', { 
+                    email, password 
+                })
                 
                 console.log('Login response:', data);
                 
                 if (data.success) {
-                    // Store token if backend returns one
-                    if (data.token) {
-                        localStorage.setItem('authToken', data.token);
-                        // Set default auth header for all future axios requests
-                        axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-                    }
-                    
-                    // Store user data
-                    if (data.userData) {
-                        localStorage.setItem('userData', JSON.stringify(data.userData));
-                        setUserData(data.userData);
-                    }
-                    
-                    setIsLoggedin(true);
-                    localStorage.setItem('isLoggedin', 'true');
-                    
-                    // Also try to fetch fresh user data
-                    await getUserData();
+                    // Use the login function from context
+                    login(data.userData);
                     
                     toast.success('Login successful!');
                     navigate('/home');
@@ -84,20 +73,25 @@ const Login = () => {
             }
         } catch (error) {
             console.error('Auth error:', error);
+            
             if (error.response) {
+                console.log('Server response:', error.response.data);
                 toast.error(error.response.data?.message || 'Server error occurred');
             } else if (error.request) {
-                toast.error('Cannot connect to server. Please check if backend is running.');
+                console.log('No response. Backend URL:', backendUrl);
+                toast.error(`Cannot connect to server at ${backendUrl}. Please check if backend is running.`);
             } else {
                 toast.error(error.message || 'An error occurred');
             }
+        } finally {
+            setLoading(false);
         }
     }
 
     return (
         <div className='min-h-screen bg-[#00001b] flex items-center justify-center px-4'>
             <div className='absolute top-8 left-8'>
-                <NavLink to={frontendUrl} className="text-xl font-bold text-orange-400">
+                <NavLink to="/" className="text-xl font-bold text-orange-400">
                     <img src={logo} alt="Logo" />
                 </NavLink>
             </div>
@@ -156,8 +150,12 @@ const Login = () => {
                             Forgot Password?
                         </p>
 
-                        <button type="submit" className='w-full py-3.5 rounded-xl font-medium text-white bg-indigo-700 hover:bg-indigo-600 transition-colors'>
-                            {state}
+                        <button 
+                            type="submit" 
+                            disabled={loading}
+                            className='w-full py-3.5 rounded-xl font-medium text-white bg-indigo-700 hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                        >
+                            {loading ? 'Please wait...' : state}
                         </button>
                     </form>
 
@@ -166,7 +164,13 @@ const Login = () => {
                             {state === 'Sign Up' ? 'Already have an account?' : "Don't have an account?"}
                             {' '}
                             <span 
-                                onClick={() => setState(state === 'Sign Up' ? 'Login' : 'Sign Up')}
+                                onClick={() => {
+                                    setState(state === 'Sign Up' ? 'Login' : 'Sign Up');
+                                    // Clear form when switching modes
+                                    setName('');
+                                    setEmail('');
+                                    setPassword('');
+                                }}
                                 className='text-indigo-400 cursor-pointer font-medium hover:text-indigo-300'
                             >
                                 {state === 'Sign Up' ? 'Sign In' : 'Create Account'}
