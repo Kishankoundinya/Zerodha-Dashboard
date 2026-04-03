@@ -29,6 +29,43 @@ const Funds = () => {
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
 
+  // CREATE API INSTANCE WITH TOKEN INTERCEPTOR
+  const api = axios.create({
+    baseURL: backendUrl,
+    withCredentials: true,
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  // CRITICAL: Add token to every request
+  api.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('✅ Funds - Token added for:', config.url);
+      } else {
+        console.log('❌ Funds - No token for:', config.url);
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  // Handle 401 responses - redirect to login
+  api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response?.status === 401) {
+        console.log('Unauthorized - redirecting to login');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('isLoggedin');
+        localStorage.removeItem('userData');
+        window.location.href = '/login';
+      }
+      return Promise.reject(error);
+    }
+  );
+
   useEffect(() => {
     fetchBalance();
     fetchTransactionHistory();
@@ -36,9 +73,7 @@ const Funds = () => {
 
   const fetchBalance = async () => {
     try {
-      const response = await axios.get(`${backendUrl}/api/user/balance`, {
-        withCredentials: true
-      });
+      const response = await api.get('/api/user/balance');
       
       if (response.data.success) {
         setBalance(response.data.data.balance);
@@ -53,9 +88,7 @@ const Funds = () => {
 
   const fetchTransactionHistory = async () => {
     try {
-      const response = await axios.get(`${backendUrl}/api/user/transactions`, {
-        withCredentials: true
-      });
+      const response = await api.get('/api/user/transactions');
       
       if (response.data.success) {
         setTransactionHistory(response.data.data.transactions);
@@ -79,9 +112,8 @@ const Funds = () => {
     setSuccess('');
 
     try {
-      const response = await axios.post(`${backendUrl}/api/user/add-balance`, 
-        { amount: amountNum },
-        { withCredentials: true }
+      const response = await api.post('/api/user/add-balance', 
+        { amount: amountNum }
       );
       
       if (response.data.success) {
@@ -120,9 +152,8 @@ const Funds = () => {
     setSuccess('');
 
     try {
-      const response = await axios.post(`${backendUrl}/api/user/withdraw-balance`,
-        { amount: amountNum },
-        { withCredentials: true }
+      const response = await api.post('/api/user/withdraw-balance',
+        { amount: amountNum }
       );
       
       if (response.data.success) {
@@ -295,7 +326,7 @@ const Funds = () => {
                   <th className="pb-3">Amount</th>
                   <th className="pb-3">Date & Time</th>
                   <th className="pb-3">Status</th>
-                 </tr>
+                </tr>
               </thead>
               <tbody>
                 {transactionHistory.map((transaction, index) => (
@@ -307,23 +338,23 @@ const Funds = () => {
                           {transaction.type}
                         </span>
                       </div>
-                    </td>
+                     </td>
                     <td className="py-3">
                       <span className={transaction.type === 'credit' ? 'text-green-400' : 'text-red-400'}>
                         {transaction.type === 'credit' ? '+' : '-'} ₹ {transaction.amount.toFixed(2)}
                       </span>
-                    </td>
+                     </td>
                     <td className="py-3 text-gray-400 text-sm">
                       <div className="flex items-center gap-2">
                         <FontAwesomeIcon icon={faClock} className="text-xs" />
                         {formatDate(transaction.date)}
                       </div>
-                    </td>
+                     </td>
                     <td className="py-3">
                       <span className="text-green-400 text-sm bg-green-500/20 px-2 py-1 rounded-full">
                         Completed
                       </span>
-                    </td>
+                     </td>
                   </tr>
                 ))}
               </tbody>

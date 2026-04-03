@@ -23,19 +23,33 @@ const Header = () => {
     const [lastUpdated, setLastUpdated] = useState(null)
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003'
-// ADD THIS DEBUG CODE:
-console.log('=== BACKEND URL DEBUG ===')
-console.log('Raw VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL)
-console.log('All env vars:', import.meta.env)
-console.log('Final backendUrl:', backendUrl)
-console.log('========================')
-    // Function to fetch current price for a single stock
+
+    // CREATE API INSTANCE WITH INTERCEPTOR (SAME AS LOGIN)
+    const api = axios.create({
+        baseURL: backendUrl,
+        withCredentials: true,
+        headers: { 'Content-Type': 'application/json' }
+    });
+
+    // CRITICAL: Add token to every request
+    api.interceptors.request.use(
+        (config) => {
+            const token = localStorage.getItem('authToken');
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+                console.log('✅ Header - Token added for:', config.url);
+            } else {
+                console.log('❌ Header - No token for:', config.url);
+            }
+            return config;
+        },
+        (error) => Promise.reject(error)
+    );
+
     const fetchSingleStockPrice = async (symbol) => {
         try {
-            const response = await axios.get(`${backendUrl}/api/stocks/quote`, {
-                params: { symbol: symbol },
-                withCredentials: true,
-                timeout: 10000
+            const response = await api.get('/api/stocks/quote', {
+                params: { symbol: symbol }
             })
             
             if (response.data && response.data.c) {
@@ -48,7 +62,6 @@ console.log('========================')
         }
     }
 
-    // Function to fetch current prices for all holdings
     const fetchCurrentPrices = useCallback(async (holdings) => {
         if (!holdings || holdings.length === 0) return
         
@@ -56,14 +69,12 @@ console.log('========================')
         try {
             console.log(`Fetching real-time prices for ${holdings.length} stocks...`)
             
-            // Fetch prices for all stocks in parallel
             const pricePromises = holdings.map(holding => 
                 fetchSingleStockPrice(holding.stockName)
             )
             
             const prices = await Promise.all(pricePromises)
             
-            // Create prices object
             const newPrices = {}
             let successCount = 0
             
@@ -72,16 +83,14 @@ console.log('========================')
                     newPrices[holding.stockName] = prices[index]
                     successCount++
                 } else {
-                    // Fallback to average price if fetch fails
                     newPrices[holding.stockName] = holding.avgPrice
                 }
             })
             
             setCurrentPrices(newPrices)
             setLastUpdated(new Date())
-            console.log(` Updated prices: ${successCount}/${holdings.length} stocks`)
+            console.log(`Updated prices: ${successCount}/${holdings.length} stocks`)
             
-            // Update portfolio calculations with new prices
             updatePortfolioCalculations(holdings, newPrices)
             
         } catch (error) {
@@ -89,9 +98,8 @@ console.log('========================')
         } finally {
             setPricesLoading(false)
         }
-    }, [backendUrl])
+    }, [])
 
-    // Function to update portfolio calculations with current prices
     const updatePortfolioCalculations = (holdings, prices) => {
         let totalCurrentValue = 0
         let totalInvestment = 0
@@ -113,17 +121,13 @@ console.log('========================')
         }))
     }
 
-    // Function to fetch holdings data
     const fetchHoldingsData = async () => {
         setLoading(true)
         setError('')
         
         try {
             console.log('Fetching holdings data...')
-            const response = await axios.get(`${backendUrl}/api/orders/holdings`, {
-                withCredentials: true,
-                timeout: 10000
-            })
+            const response = await api.get('/api/orders/holdings')
             
             if (response.data.success) {
                 const holdings = response.data.data.holdings
@@ -140,13 +144,12 @@ console.log('========================')
                     holdings,
                     currentBalance,
                     totalInvestment,
-                    totalCurrentValue: totalInvestment, // Will be updated with real prices
+                    totalCurrentValue: totalInvestment,
                     totalPnL: 0,
                     totalPnLPercentage: 0,
                     holdingsCount
                 })
                 
-                // Fetch current prices if there are holdings
                 if (holdings.length > 0) {
                     await fetchCurrentPrices(holdings)
                 }
@@ -161,7 +164,6 @@ console.log('========================')
         }
     }
 
-    // Manual refresh function
     const handleManualRefresh = async () => {
         console.log('🔄 Manual refresh triggered')
         if (holdingsData.holdings.length > 0) {
@@ -171,24 +173,21 @@ console.log('========================')
         }
     }
 
-    // Initial fetch
     useEffect(() => {
         fetchHoldingsData()
     }, [])
 
-    // Auto-refresh every 30 seconds
     useEffect(() => {
         if (holdingsData.holdings.length > 0 && !pricesLoading) {
             const intervalId = setInterval(() => {
                 console.log('🔄 Auto-refreshing prices...')
                 fetchCurrentPrices(holdingsData.holdings)
-            }, 30000) // Update every 30 seconds
+            }, 30000)
             
             return () => clearInterval(intervalId)
         }
     }, [holdingsData.holdings, fetchCurrentPrices, pricesLoading])
 
-    // Format number with K, M, B
     const formatNumber = (num) => {
         if (num >= 1000000000) {
             return (num / 1000000000).toFixed(2) + 'B'
@@ -206,7 +205,6 @@ console.log('========================')
     const marginUsed = holdingsData.totalInvestment
     const openingBalance = holdingsData.currentBalance + holdingsData.totalInvestment
 
-    // Stats Card Component
     const StatsCard = ({ icon, label, value, suffix = '', prefix = '', trend = null, isLoading = false }) => (
         <div className="bg-gradient-to-br from-gray-800/40 to-indigo-900/20 rounded-xl p-4 border border-white/10 hover:border-indigo-500/50 transition-all duration-300 hover:scale-[1.02]">
             <div className="flex items-center justify-between mb-2">
@@ -249,7 +247,6 @@ console.log('========================')
                                 Welcome back, {userData ? userData.name.split(' ')[0] : 'Investor'}!
                             </h1>
                             
-                            {/* Refresh Button */}
                             <button
                                 onClick={handleManualRefresh}
                                 disabled={pricesLoading || loading}
@@ -276,7 +273,6 @@ console.log('========================')
                             </button>
                         </div>
                         
-                        {/* Last Updated Timestamp */}
                         {lastUpdated && !pricesLoading && !loading && (
                             <p className="text-xs text-gray-500 mt-2">
                                 Last updated: {lastUpdated.toLocaleTimeString()}
@@ -291,7 +287,6 @@ console.log('========================')
                 </div>
 
                 {loading ? (
-                    // Loading Skeleton
                     <div className="animate-pulse">
                         <div className="grid lg:grid-cols-2 gap-6">
                             <div className="space-y-6">
@@ -308,43 +303,14 @@ console.log('========================')
                     </div>
                 ) : (
                     <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
-                        {/* Left Column - Portfolio Stats */}
                         <div className="space-y-6">
-                            {/* Stats Grid */}
                             <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                                <StatsCard 
-                                    icon={faClock} 
-                                    label="Margin Available" 
-                                    value={marginAvailable} 
-                                    prefix="₹ "
-                                    isLoading={loading}
-                                />
-                                <StatsCard 
-                                    icon={faWallet} 
-                                    label="Opening Balance" 
-                                    value={openingBalance} 
-                                    prefix="₹ "
-                                    isLoading={loading}
-                                />
-                                <StatsCard 
-                                    icon={faCreditCard} 
-                                    label="Total Investment" 
-                                    value={holdingsData.totalInvestment} 
-                                    prefix="₹ "
-                                    isLoading={loading}
-                                />
-                                <StatsCard 
-                                    icon={faChartLine} 
-                                    label="Total Returns" 
-                                    value={Math.abs(holdingsData.totalPnLPercentage)} 
-                                    suffix="%" 
-                                    prefix={holdingsData.totalPnLPercentage >= 0 ? '+' : '-'}
-                                    trend={holdingsData.totalPnLPercentage}
-                                    isLoading={loading || pricesLoading}
-                                />
+                                <StatsCard icon={faClock} label="Margin Available" value={marginAvailable} prefix="₹ " isLoading={loading} />
+                                <StatsCard icon={faWallet} label="Opening Balance" value={openingBalance} prefix="₹ " isLoading={loading} />
+                                <StatsCard icon={faCreditCard} label="Total Investment" value={holdingsData.totalInvestment} prefix="₹ " isLoading={loading} />
+                                <StatsCard icon={faChartLine} label="Total Returns" value={Math.abs(holdingsData.totalPnLPercentage)} suffix="%" prefix={holdingsData.totalPnLPercentage >= 0 ? '+' : '-'} trend={holdingsData.totalPnLPercentage} isLoading={loading || pricesLoading} />
                             </div>
 
-                            {/* Holdings Summary Card */}
                             <div className="bg-gradient-to-br from-gray-800/40 to-indigo-900/20 rounded-xl border border-white/10 backdrop-blur-sm overflow-hidden">
                                 <div className="p-5 border-b border-white/10">
                                     <div className="flex items-center justify-between">
@@ -379,7 +345,6 @@ console.log('========================')
                                         </div>
                                     ) : (
                                         <>
-                                            {/* Summary Stats */}
                                             <div className="grid grid-cols-2 gap-4 mb-5 pb-5 border-b border-white/10">
                                                 <div>
                                                     <p className="text-xs text-gray-400 mb-1">Current Value</p>
@@ -405,7 +370,6 @@ console.log('========================')
                                                 </div>
                                             </div>
                                             
-                                            {/* Recent Holdings Preview */}
                                             <div className="space-y-3">
                                                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Holdings</p>
                                                 {holdingsData.holdings.slice(0, 3).map((holding, index) => {
@@ -430,10 +394,7 @@ console.log('========================')
                                                 })}
                                                 
                                                 {holdingsData.holdingsCount > 3 && (
-                                                    <button 
-                                                        onClick={() => window.location.href = '/home/holdings'}
-                                                        className="w-full text-center text-xs text-indigo-400 hover:text-indigo-300 py-2"
-                                                    >
+                                                    <button onClick={() => window.location.href = '/home/holdings'} className="w-full text-center text-xs text-indigo-400 hover:text-indigo-300 py-2">
                                                         View all {holdingsData.holdingsCount} holdings →
                                                     </button>
                                                 )}
@@ -443,19 +404,12 @@ console.log('========================')
                                 </div>
                             </div>
 
-                            {/* Quick Actions */}
                             <div className="grid grid-cols-2 gap-3">
-                                <button 
-                                    onClick={() => window.location.href = '/home/funds'}
-                                    className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 rounded-xl p-3 text-center hover:scale-105 transition-all duration-300 group"
-                                >
+                                <button onClick={() => window.location.href = '/home/funds'} className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 rounded-xl p-3 text-center hover:scale-105 transition-all duration-300 group">
                                     <p className="text-indigo-400 text-sm font-semibold group-hover:text-indigo-300">Add Funds</p>
                                     <p className="text-gray-500 text-xs mt-1">Deposit money</p>
                                 </button>
-                                <button 
-                                    onClick={() => window.location.href = '/home/holdings'}
-                                    className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-xl p-3 text-center hover:scale-105 transition-all duration-300 group"
-                                >
+                                <button onClick={() => window.location.href = '/home/holdings'} className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-xl p-3 text-center hover:scale-105 transition-all duration-300 group">
                                     <p className="text-green-400 text-sm font-semibold group-hover:text-green-300">View Portfolio</p>
                                     <p className="text-gray-500 text-xs mt-1">See all holdings</p>
                                 </button>
@@ -469,19 +423,13 @@ console.log('========================')
                                         </svg>
                                         <div className="flex-1">
                                             <p className="text-red-400 text-sm">{error}</p>
-                                            <button 
-                                                onClick={fetchHoldingsData}
-                                                className="text-xs text-red-400 underline mt-1"
-                                            >
-                                                Retry
-                                            </button>
+                                            <button onClick={fetchHoldingsData} className="text-xs text-red-400 underline mt-1">Retry</button>
                                         </div>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* Right Column - Stock Search */}
                         <div className="lg:sticky lg:top-24">
                             <div className="bg-gradient-to-br from-gray-800/30 to-indigo-900/20 rounded-2xl border border-white/10 backdrop-blur-sm overflow-hidden h-full">
                                 <div className="p-4 sm:p-5">

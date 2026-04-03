@@ -14,19 +14,53 @@ const Holdings = () => {
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3003';
 
+  // CREATE API INSTANCE WITH TOKEN INTERCEPTOR
+  const api = axios.create({
+    baseURL: backendUrl,
+    withCredentials: true,
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  // CRITICAL: Add token to every request
+  api.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('✅ Holdings - Token added for:', config.url);
+      } else {
+        console.log('❌ Holdings - No token for:', config.url);
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  // Handle 401 responses - redirect to login
+  api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response?.status === 401) {
+        console.log('Unauthorized - redirecting to login');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('isLoggedin');
+        localStorage.removeItem('userData');
+        window.location.href = '/login';
+      }
+      return Promise.reject(error);
+    }
+  );
+
   // Function to fetch current price for a single stock
   const fetchSingleStockPrice = async (symbol) => {
     try {
       console.log(`Fetching price for ${symbol}...`);
-      const response = await axios.get(`${backendUrl}/api/stocks/quote`, {
-        params: { symbol: symbol },
-        withCredentials: true,
-        timeout: 10000
+      const response = await api.get('/api/stocks/quote', {
+        params: { symbol: symbol }
       });
       
       console.log(`Price for ${symbol}:`, response.data);
       
-      // Finnhub quote response structure: c = current price
       if (response.data && response.data.c) {
         return response.data.c;
       }
@@ -52,14 +86,12 @@ const Holdings = () => {
       console.log(`Fetching current prices for ${holdingsData.length} stocks...`);
       console.log('Stock symbols:', holdingsData.map(h => h.stockName));
       
-      // Fetch prices for all stocks in parallel
       const pricePromises = holdingsData.map(holding => 
         fetchSingleStockPrice(holding.stockName)
       );
       
       const prices = await Promise.all(pricePromises);
       
-      // Create prices object
       const newPrices = {};
       let successCount = 0;
       
@@ -69,7 +101,6 @@ const Holdings = () => {
           successCount++;
           console.log(`${holding.stockName}: Current price = ${prices[index]}`);
         } else {
-          // Fallback to average price if fetch fails
           newPrices[holding.stockName] = holding.avgPrice;
           console.log(`${holding.stockName}: Using average price ${holding.avgPrice}`);
         }
@@ -81,7 +112,6 @@ const Holdings = () => {
       
     } catch (error) {
       console.error('Error fetching current prices:', error);
-      // Fallback to using average price
       const fallbackPrices = {};
       holdingsData.forEach(holding => {
         fallbackPrices[holding.stockName] = holding.avgPrice;
@@ -92,7 +122,7 @@ const Holdings = () => {
         setPricesLoading(false);
       }
     }
-  }, [backendUrl]);
+  }, []);
 
   const fetchHoldings = async () => {
     console.log('Fetching holdings...');
@@ -100,13 +130,10 @@ const Holdings = () => {
     setError('');
     
     try {
-      const url = `${backendUrl}/api/orders/holdings`;
+      const url = '/api/orders/holdings';
       console.log('Making GET request to:', url);
       
-      const response = await axios.get(url, {
-        withCredentials: true,
-        timeout: 10000
-      });
+      const response = await api.get(url);
       
       console.log('Holdings response:', response.data);
       
@@ -117,7 +144,6 @@ const Holdings = () => {
         setHoldings(holdingsData);
         
         if (holdingsData.length > 0) {
-          // Fetch current prices after getting holdings
           await fetchCurrentPrices(holdingsData, true);
         } else {
           console.log('No holdings found');
@@ -140,7 +166,6 @@ const Holdings = () => {
     }
   };
 
-  // Manual refresh function
   const handleManualRefresh = async () => {
     console.log('🔄 Manual refresh triggered');
     if (holdings.length > 0) {
@@ -150,18 +175,16 @@ const Holdings = () => {
     }
   };
 
-  // Initial fetch
   useEffect(() => {
     console.log('Holdings component mounted');
     fetchHoldings();
   }, []);
 
-  // Auto-refresh every 60 seconds
   useEffect(() => {
     if (holdings.length > 0 && !pricesLoading) {
       const intervalId = setInterval(() => {
         console.log('🔄 Auto-refreshing prices...');
-        fetchCurrentPrices(holdings, false); // Don't show loading for auto-refresh
+        fetchCurrentPrices(holdings, false);
       }, 60000);
       
       return () => clearInterval(intervalId);
@@ -174,7 +197,6 @@ const Holdings = () => {
   };
 
   const handleSellSuccess = () => {
-    // Refresh holdings after successful sale
     fetchHoldings();
     setIsModalOpen(false);
   };
@@ -200,7 +222,6 @@ const Holdings = () => {
   const totalProfitLoss = totalCurrentValue - totalInvestment;
   const totalProfitLossPercentage = totalInvestment > 0 ? (totalProfitLoss / totalInvestment) * 100 : 0;
 
-  // Debug: Log current state
   console.log('Holdings state:', { 
     loading, 
     holdingsCount: holdings.length, 
